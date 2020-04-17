@@ -14,3 +14,27 @@ git clone github_url local_directory
 git commit
 git push
 git checkout -b myNewBranch fromThisOrigin
+
+///// 	TO UPDATE A PROJECT
+
+Create the project from the branch it will be normally used
+Create the gitignore file
+git touch .gitignore
+Copy an example or extend the one it is already included
+
+To merge the consequent branches without affecting the general independant structure
+	of the branches:
+
+git checkout develop	//imagine that the change was made in master and we want it to be in all the other branches
+git merge --no-ff master	//master privails as develop has the last changes from master
+
+git checkout feature
+git merge --no-ff develop	//now feature has incorporated the updated version of develop, hence feature has the master's changes as well
+
+/////	USING STASH
+Before changing to any other branch when the modifications are not yet ready
+
+git stash
+After having shown what was needed and being again in the initial branch, 
+	to recover what was previously stashed
+git stash pop

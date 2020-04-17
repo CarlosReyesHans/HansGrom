@@ -3,6 +3,10 @@
  *
  *  Created on: Apr 12, 2020
  *      Author: JC
+ *
+ *      The following are the function sets for the 1-Wire Protocol needed by the Temperature Sensor and
+ *      	data transimission interface to the WS2812.
+ *
  */
 
 #include "userFunctions.h"
@@ -179,3 +183,50 @@ int8_t float2string(float floatValue, char* stringArray){	//TODO This function c
 	return 1;
 
 }
+
+/*
+ * FUNCTIONS FOR THE WS2812 LED
+ */
+
+/*
+ * @brief		Writes the data bits contained in a byte according to 1Wire interface
+ * @assumes		Data is of length 8
+ * @param		8 bits data
+ * @retval		Nothing
+ *
+ */
+
+void writeWSLED (uint32_t data) {
+	setOutputWSLED();
+	for (uint8_t i=23;i!=0;i--){
+		if ((data>>i) & 1) {		//First bit is high
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);				//TODO declare the ports
+			userDelayUs(7, nsTimerHandler);									//TODO declare the new timer
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);				//Releases the bus
+			userDelayUs(6, nsTimerHandler);
+		}
+		else {
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);
+			userDelayUs(3, nsTimerHandler);
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);				//Releases the bus
+			userDelayUs(8, nsTimerHandler);
+		}																	//TODO Write the RESET function that will only call depending on the Refresh rate
+	}
+}
+
+/*
+ * @brief	Function to set the 1wire pin as output (always)
+ * @assumes	Following is defined #define temp1wire_Pin GPIO_PIN_2 #define temp1wire_GPIO_Port GPIOG
+ *
+ */
+
+void setOutputWSLED (void) {	//TODO finish the definition according to the needs
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	  GPIO_InitStruct.Pin = temp1wire_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  //GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+}
+
+
