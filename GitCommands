@@ -1,0 +1,16 @@
+2020.04.17
+/*
+*	NEW GIT HELP COOMMANDS
+*/
+
+TODO
+
+Merge with the one in Ubuntu
+
+
+///// Commands!
+
+git clone github_url local_directory
+git commit
+git push
+git checkout -b myNewBranch fromThisOrigin
