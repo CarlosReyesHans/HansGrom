@@ -484,7 +484,7 @@ void startLeds(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  printf("Led Task Loop\n");
+	  printf("Led Task develop Loop\n");
     osDelay(1000);
   }
   /* USER CODE END startLeds */
