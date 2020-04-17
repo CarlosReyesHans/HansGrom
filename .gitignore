@@ -43,4 +43,6 @@ Thumbs.db
 **/Drivers
 **/Middlewares
 *.launch
-*.Id
+*.ld
+**/syscalls.c
+**/system.c
