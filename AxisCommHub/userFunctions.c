@@ -17,23 +17,23 @@
 
 
 /*
- * @brief	This function uses a timer to create a base time delay of 1 us
+ * @brief	This function uses a timer to create a base time delay of 1 us/50ns
  * @param	The time in microseconds
  * @retval	Nothing
  */
 
-void userDelayUs (uint16_t us, TIM_HandleTypeDef* timerHandler) {
+void userDelay (uint16_t timeUnits, TIM_HandleTypeDef* timerHandler) {
 	__HAL_TIM_SET_COUNTER(timerHandler,0);
-	while ((__HAL_TIM_GET_COUNTER(timerHandler))<us);
+	while ((__HAL_TIM_GET_COUNTER(timerHandler))<timeUnits);
 }
 /*
  * @brief	Function to set the private pointer to the base timer
  * @assumes	TIM_HandleTypeDef Handler has been previously defined with a sensitive base time
  *
  */
-void initOneWireHandler(TIM_HandleTypeDef* handlerPtr){
-	usTimerHandler = handlerPtr;
-	//TODO	THE OUTPUT HAS THE LEVEL 1 FROM THE VERY BEGINNING TO ENSURE THAT THE INIT WILL DETECT THE VOLTAGE DROP?
+void initTimerHandlers(TIM_HandleTypeDef* usHandlerPtr,TIM_HandleTypeDef* nsHandlerPtr){
+	usTimerHandler = usHandlerPtr;
+	nsTimerHandler = nsHandlerPtr;
 
 }
 
@@ -78,17 +78,17 @@ int8_t startOneWire (){
 	setPinAsOutput();
 	//Pulling the pin low
 	HAL_GPIO_WritePin(temp1wire_GPIO_Port, temp1wire_Pin, 0);
-	userDelayUs(500, usTimerHandler);
+	userDelay(500, usTimerHandler);
 
 	setPinAsInput();
-	userDelayUs(100, usTimerHandler);
+	userDelay(100, usTimerHandler);
 
 	if (!(HAL_GPIO_ReadPin(temp1wire_GPIO_Port, temp1wire_Pin)))
 		deviceResponse = 1;
 	else
 		deviceResponse = -1;
 
-	userDelayUs(400, usTimerHandler);
+	userDelay(400, usTimerHandler);
 	return deviceResponse;
 }
 
@@ -106,14 +106,14 @@ void writeOneWire (uint8_t data) {
 		if (((data & (1<<i))>>i)==1) {		//First bit is high //TODO this could be easily improved
 			setPinAsOutput();
 			HAL_GPIO_WritePin(temp1wire_GPIO_Port, temp1wire_Pin, 0);
-			userDelayUs(2, usTimerHandler);
+			userDelay(2, usTimerHandler);
 			setPinAsInput();				//Releases the bus
-			userDelayUs(60, usTimerHandler);
+			userDelay(60, usTimerHandler);
 		}
 		else {
 			setPinAsOutput();
 			HAL_GPIO_WritePin(temp1wire_GPIO_Port, temp1wire_Pin, 0);
-			userDelayUs(60, usTimerHandler);
+			userDelay(60, usTimerHandler);
 			setPinAsInput();				//Releases the bus
 		}
 	}
@@ -132,12 +132,12 @@ uint8_t readOneWire (void) {
 	for (uint8_t i=0;i<8;i++){
 		setPinAsOutput();
 		HAL_GPIO_WritePin(temp1wire_GPIO_Port, temp1wire_Pin, 0);
-		userDelayUs(2, usTimerHandler);
+		userDelay(2, usTimerHandler);
 		setPinAsInput();
-		userDelayUs(8, usTimerHandler);
+		userDelay(8, usTimerHandler);
 		if ((HAL_GPIO_ReadPin(temp1wire_GPIO_Port, temp1wire_Pin)))
 			data |= 1<<i;		//Storing high bit whenever it appears over the bus
-		userDelayUs(50, usTimerHandler);
+		userDelay(50, usTimerHandler);
 	}
 	return data;
 }
@@ -187,46 +187,65 @@ int8_t float2string(float floatValue, char* stringArray){	//TODO This function c
 /*
  * FUNCTIONS FOR THE WS2812 LED
  */
+/*
+ * @brief		Resets according to WSLED Communication Protocol,
+ * 					the time base uses a multiplication factor of 50ns
+ * @assumes		nsTimerHandler should have already been defined with a time base of 50 ns
+ * @assumes		usTimerHandler should have already been defined with a time base of 1 us
+ * @param		None
+ * @retval		Nothing
+ *
+ */
+
+void resetWSLED (void) {		//Todo This function might disappear to use only the OS Delay
+	setOutputWSLED();
+	HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);
+	userDelay(60, usTimerHandler);
+}
 
 /*
- * @brief		Writes the data bits contained in a byte according to 1Wire interface
- * @assumes		Data is of length 8
- * @param		8 bits data
+ * @brief		Writes the data bits contained in a byte according to WSLED Communication Protocol,
+ * 					the time base uses a multiplication factor of 50ns
+ * @assumes		Data is of length at least of length 24-bits
+ * @assumes		nsTimerHandler should have already been defined with a time base of 50 ns
+ * @param		at least 24 bits data
  * @retval		Nothing
  *
  */
 
 void writeWSLED (uint32_t data) {
 	setOutputWSLED();
-	for (uint8_t i=23;i!=0;i--){
-		if ((data>>i) & 1) {		//First bit is high
-			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);				//TODO declare the ports
-			userDelayUs(7, nsTimerHandler);									//TODO declare the new timer
-			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);				//Releases the bus
-			userDelayUs(6, nsTimerHandler);
+	for (uint8_t i=0;i<24;i++){
+		if ((data>>i) & 1) {		//The bit is high
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);
+			userDelay(14, nsTimerHandler);
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);
+			userDelay(12, nsTimerHandler);
+			//printf("1\n");
 		}
 		else {
 			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);
-			userDelayUs(3, nsTimerHandler);
-			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);				//Releases the bus
-			userDelayUs(8, nsTimerHandler);
-		}																	//TODO Write the RESET function that will only call depending on the Refresh rate
+			userDelay(7, nsTimerHandler);
+			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 0);
+			userDelay(16, nsTimerHandler);
+			//printf("0\n");
+		}
 	}
 }
 
 /*
- * @brief	Function to set the 1wire pin as output (always)
- * @assumes	Following is defined #define temp1wire_Pin GPIO_PIN_2 #define temp1wire_GPIO_Port GPIOG
+ * @brief	Function to set the WSLED pin as output (always)
+ * @assumes	Following is defined #define WSLED_Pin GPIO_PIN_3
  *
  */
 
-void setOutputWSLED (void) {	//TODO finish the definition according to the needs
+void setOutputWSLED (void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
-	  GPIO_InitStruct.Pin = temp1wire_Pin;
+	  GPIO_InitStruct.Pin = WSLED_Pin;
 	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	  //GPIO_InitStruct.Pull = GPIO_NOPULL;
-	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+	  HAL_GPIO_Init(WSLED_GPIO_Port, &GPIO_InitStruct);
 }
 
 

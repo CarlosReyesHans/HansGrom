@@ -11,16 +11,22 @@
 #include "main.h"
 //Variables or handlers
 TIM_HandleTypeDef* usTimerHandler;
+TIM_HandleTypeDef* nsTimerHandler;
 
-void userDelayUs (uint16_t us, TIM_HandleTypeDef* timerHandler);
+void userDelay (uint16_t timeUnits, TIM_HandleTypeDef* timerHandler);
 
 
-void initOneWireHandler(TIM_HandleTypeDef* handlerPtr);
+void initTimerHandlers(TIM_HandleTypeDef* usHandlerPtr,TIM_HandleTypeDef* nsHandlerPtr);
 int8_t startOneWire ();
 void setPinAsOutput (void);
 void setPinAsInput (void);
 void writeOneWire (uint8_t data);
 uint8_t readOneWire (void);
+
+// WS2812 Functions
+void resetWSLED (void);
+void writeWSLED (uint32_t data);
+void setOutputWSLED (void);
 
 /*
  * Auxiliar functions

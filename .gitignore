@@ -36,7 +36,7 @@
 ehthumbs.db
 Thumbs.db
 
-# ignore a specific directory #
+# ignore a specific directory stm32cubeide#
 ###############################
 **/.settings
 **/Debug
@@ -46,3 +46,6 @@ Thumbs.db
 *.ld
 **/syscalls.c
 **/system.c
+**/*.cproject
+**/*.mxproject
+**/*.ld

@@ -75,8 +75,8 @@ uint8_t count,Temp_byte1,Temp_byte2,errorCounter;
 int16_t temperature;
 float temp_float;
 
-//int16_t temp_intArray[20];
-//float temp_floatArray[20];
+//These variables should go away
+uint32_t WSdata1, WSdata2;
 
 /* USER CODE END PV */
 
@@ -137,13 +137,20 @@ int main(void)
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   printf("initializing...");
-
+  //Temperature initialization code
   HAL_TIM_Base_Start(&htim6);
-  initOneWireHandler(&htim6);
+
   setPinAsInput();
   HAL_Delay(500);
   count = 0;
   errorCounter = 0;
+  //LED initialization code
+  HAL_TIM_Base_Start(&htim10);
+  WSdata1 = 0x00FF0000;
+  WSdata2 = 0x0000FF00;
+
+  initTimerHandlers(&htim6,&htim10);
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -227,7 +234,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
@@ -256,7 +263,7 @@ static void MX_TIM6_Init(void)
   htim6.Init.Prescaler = 10-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim6.Init.Period = 0xffff-1;
-  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
     Error_Handler();
@@ -291,9 +298,9 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 1-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 0xffff-1;
+  htim10.Init.Period = 0xffff - 1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
     Error_Handler();
@@ -358,7 +365,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, temp1wire_Pin|USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOG, temp1wire_Pin|WSLED_Pin|USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : USER_Btn_Pin */
   GPIO_InitStruct.Pin = USER_Btn_Pin;
@@ -379,6 +386,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : WSLED_Pin */
+  GPIO_InitStruct.Pin = WSLED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  HAL_GPIO_Init(WSLED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : USB_OverCurrent_Pin */
   GPIO_InitStruct.Pin = USB_OverCurrent_Pin;
@@ -425,6 +439,9 @@ void runTemperature(void *argument)
 	  float temp_floatArray[10];
 	  char numberString[7];
 	  printf("Temperature Task Loop\n");
+
+	  printf("Temperature will fnish\n");
+	  osThreadTerminate(temperatureTHandle);
 
 	  if(startOneWire() == -1)
 	  	  errorCounter++;
@@ -484,8 +501,12 @@ void startLeds(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  printf("Led Task v1 Loop\n");
-    osDelay(1000);
+	printf("Led Task v1 Loop\n");
+	  resetWSLED();
+	  writeWSLED(WSdata1);
+	  writeWSLED(WSdata2);
+
+    osDelay(2);
   }
   /* USER CODE END startLeds */
 }
