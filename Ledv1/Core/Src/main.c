@@ -68,7 +68,42 @@ const osThreadAttr_t updateLeds_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
+/* Definitions for blinkLED */
+osThreadId_t blinkLEDHandle;
+uint32_t blinkLEDBuffer[ 128 ];
+osStaticThreadDef_t blinkLEDControlBlock;
+const osThreadAttr_t blinkLED_attributes = {
+  .name = "blinkLED",
+  .stack_mem = &blinkLEDBuffer[0],
+  .stack_size = sizeof(blinkLEDBuffer),
+  .cb_mem = &blinkLEDControlBlock,
+  .cb_size = sizeof(blinkLEDControlBlock),
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
+
+/*
+ * User defined Threads
+ */
+
+/* Definitions for userSignal3 */
+osThreadId_t userSignal3Handle;
+uint32_t userSignal3Buffer[ 128 ];
+osStaticThreadDef_t userSignal3ControlBlock;
+const osThreadAttr_t userSignal3_attributes = {
+  .name = "userSignal3",
+  .stack_mem = &userSignal3Buffer[0],
+  .stack_size = sizeof(userSignal3Buffer),
+  .cb_mem = &userSignal3ControlBlock,
+  .cb_size = sizeof(userSignal3ControlBlock),
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+//functionPrototype
+void userSignal3(void *argument);
+
+
+
 
 uint8_t count,Temp_byte1,Temp_byte2,errorCounter;
 
@@ -77,6 +112,7 @@ float temp_float;
 
 //These variables should go away
 uint32_t WSdata1, WSdata2;
+uint32_t WSdata[] = {0x0000ff,0x00ff00, 0xff0000,0x0000ff,0x00ff00, 0xff0000,0xffff00,0x00ffff,0xff00ff};
 
 /* USER CODE END PV */
 
@@ -88,6 +124,7 @@ static void MX_TIM6_Init(void);
 static void MX_TIM10_Init(void);
 void runTemperature(void *argument);
 void startLeds(void *argument);
+void blinkingLED(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -149,6 +186,7 @@ int main(void)
   WSdata1 = 0x00FF0000;
   WSdata2 = 0x0000FF00;
 
+
   initTimerHandlers(&htim6,&htim10);
 
   /* USER CODE END 2 */
@@ -179,8 +217,13 @@ int main(void)
   /* creation of updateLeds */
   updateLedsHandle = osThreadNew(startLeds, NULL, &updateLeds_attributes);
 
+  /* creation of blinkLED */
+  blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+  userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -210,7 +253,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
@@ -232,11 +275,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -356,22 +399,33 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(userSignal_GPIO_Port, userSignal_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, temp1wire_Pin|WSLED_Pin|USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOG, userSignal2_Pin|userSignal3_Pin|temp1wire_Pin|WSLED_Pin 
+                          |USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : USER_Btn_Pin */
   GPIO_InitStruct.Pin = USER_Btn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : userSignal_Pin */
+  GPIO_InitStruct.Pin = userSignal_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(userSignal_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
   GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
@@ -380,19 +434,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : temp1wire_Pin USB_PowerSwitchOn_Pin */
-  GPIO_InitStruct.Pin = temp1wire_Pin|USB_PowerSwitchOn_Pin;
+  /*Configure GPIO pins : userSignal2_Pin temp1wire_Pin USB_PowerSwitchOn_Pin */
+  GPIO_InitStruct.Pin = userSignal2_Pin|temp1wire_Pin|USB_PowerSwitchOn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : WSLED_Pin */
-  GPIO_InitStruct.Pin = WSLED_Pin;
+  /*Configure GPIO pins : userSignal3_Pin WSLED_Pin */
+  GPIO_InitStruct.Pin = userSignal3_Pin|WSLED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(WSLED_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /*Configure GPIO pin : USB_OverCurrent_Pin */
   GPIO_InitStruct.Pin = USB_OverCurrent_Pin;
@@ -501,19 +555,43 @@ void startLeds(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	printf("Led Task v1 Loop\n");
+	//printf("Led Task v1 Loop\n");
 	  resetWSLED();
-	  writeWSLED(WSdata1);
-	  writeWSLED(WSdata2);
+	  for (uint8_t i=0 ; i<9 ; i++) {
+		  writeWSLED(WSdata[i]);
+	  }
 
-    osDelay(2);
+
+    osDelay(1000);
+	  //userDelay(100, usTimerHandler);
   }
   /* USER CODE END startLeds */
 }
 
+/* USER CODE BEGIN Header_blinkingLED */
+/**
+* @brief Function implementing the blinkLED thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_blinkingLED */
+void blinkingLED(void *argument)
+{
+  /* USER CODE BEGIN blinkingLED */
+  /* Infinite loop */
+  for(;;)
+  {
+	  //printf("UserSignal generated \n");
+	  HAL_GPIO_TogglePin(userSignal2_GPIO_Port,userSignal2_Pin);
+    //osDelay(1000);
+    userDelay(100, usTimerHandler);
+  }
+  /* USER CODE END blinkingLED */
+}
+
  /**
   * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM7 interrupt took place, inside
+  * @note   This function is called  when TIM12 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
   * @param  htim : TIM handle
@@ -524,7 +602,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM7) {
+  if (htim->Instance == TIM12) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */

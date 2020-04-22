@@ -214,7 +214,7 @@ void resetWSLED (void) {		//Todo This function might disappear to use only the O
  */
 
 void writeWSLED (uint32_t data) {
-	setOutputWSLED();
+//	setOutputWSLED();
 	for (uint8_t i=0;i<24;i++){
 		if ((data>>i) & 1) {		//The bit is high
 			HAL_GPIO_WritePin(WSLED_GPIO_Port, WSLED_Pin, 1);
@@ -248,4 +248,15 @@ void setOutputWSLED (void) {
 	  HAL_GPIO_Init(WSLED_GPIO_Port, &GPIO_InitStruct);
 }
 
+
+/*
+ * @brief	This is the function for user Signal 3 thread
+ *
+ */
+void userSignal3(void *argument) {
+	while(1) {
+		HAL_GPIO_TogglePin(userSignal3_GPIO_Port, userSignal3_Pin);
+		userDelay(40, nsTimerHandler);
+	}
+}
 
