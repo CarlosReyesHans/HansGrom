@@ -49,3 +49,7 @@ Thumbs.db
 **/*.cproject
 **/*.mxproject
 **/*.ld
+
+**/*.metadata/
+**/RemoteSystemsTempFiles/
+
