@@ -60,8 +60,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define WS_PWM2_Pin GPIO_PIN_5
-#define WS_PWM2_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
@@ -76,6 +74,8 @@ void Error_Handler(void);
 #define userSignal2_GPIO_Port GPIOG
 #define userSignal3_Pin GPIO_PIN_1
 #define userSignal3_GPIO_Port GPIOG
+#define wsbPWMSignal_Pin GPIO_PIN_9
+#define wsbPWMSignal_GPIO_Port GPIOE
 #define LD3_Pin GPIO_PIN_14
 #define LD3_GPIO_Port GPIOB
 #define STLK_RX_Pin GPIO_PIN_8
