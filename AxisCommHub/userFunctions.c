@@ -256,7 +256,9 @@ void setOutputWSLED (void) {
 void userSignal3(void *argument) {
 	while(1) {
 		HAL_GPIO_TogglePin(userSignal3_GPIO_Port, userSignal3_Pin);
-		userDelay(40, nsTimerHandler);
+		ws2812_update();
+		osDelay(15);
+		//userDelay(40, nsTimerHandler);
 	}
 }
 

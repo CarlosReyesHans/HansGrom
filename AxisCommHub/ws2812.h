@@ -7,7 +7,7 @@
 
 /* Definition of TIM instance */
 #define TIMx                             	TIM1
-
+//TODO all the definitions used within the MspInit can be erased once the app is tested
 /* Definition for TIMx clock resources */
 #define TIMx_CLK_ENABLE                  	__HAL_RCC_TIM2_CLK_ENABLE
 #define DMAx_CLK_ENABLE                  	__HAL_RCC_DMA1_CLK_ENABLE
@@ -20,10 +20,10 @@
 
 /* Definition for TIMx's DMA */
 #define TIMx_CC1_DMA_REQUEST             	DMA_REQUEST_4
-#define TIMx_CC1_DMA_INST                	DMA1_Channel5
+#define TIMx_CC1_DMA_INST                	DMA_CHANNEL_6
 
 /* Definition for DMAx's NVIC */
-#define TIMx_DMA_IRQn                    	DMA1_Channel5_IRQn
+#define TIMx_DMA_IRQn                    	DMA2_Stream4_IRQn//DMA_CHANNEL_6_IRQn
 #define TIMx_DMA_IRQHandler              	DMA1_Channel5_IRQHandler
 
 //WS2812
@@ -39,7 +39,7 @@
 #define WS2812_0													(TIMER_PERIOD / 3)				// WS2812's zero high time is long about one third of the period
 #define WS2812_1													(TIMER_PERIOD * 2 / 3)		// WS2812's one high time is long about two thirds of the period
 #define WS2812_RESET											(0)
-
+static uint8_t LEDbuffer[LED_BUFFER_SIZE];
 void ws2812_init(void);
 void ws2812_update(void);
 void setLEDcolor(uint32_t LEDnumber, uint8_t RED, uint8_t GREEN, uint8_t BLUE);

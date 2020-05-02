@@ -1,7 +1,7 @@
 #include "ws2812.h"
 
 /* Variables -----------------------------------------------*/
-static uint8_t LEDbuffer[LED_BUFFER_SIZE];
+
 
 TIM_HandleTypeDef TimHandle;
 TIM_OC_InitTypeDef sConfig;
@@ -19,7 +19,7 @@ DMA_HandleTypeDef hdma_tim;
  * @param htim: TIM handle pointer
  * @retval None
  */
-void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
+void HAL_TIM_PWM_MspInit_old(TIM_HandleTypeDef *htim) {
 	/*##-1- Enable peripherals and GPIO Clocks #################################*/
 	/* TIMx clock enable */
 	TIMx_CLK_ENABLE();
@@ -39,7 +39,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
 	HAL_GPIO_Init(TIMx_GPIO_CHANNEL1_PORT, &GPIO_InitStruct);
 
 	/* Set the parameters to be configured */
-	hdma_tim.Init.Request = TIMx_CC1_DMA_REQUEST;
+	//hdma_tim.Init.Request = TIMx_CC1_DMA_REQUEST;
 	hdma_tim.Init.Direction = DMA_MEMORY_TO_PERIPH;
 	hdma_tim.Init.PeriphInc = DMA_PINC_DISABLE;
 	hdma_tim.Init.MemInc = DMA_MINC_ENABLE;

@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "userFunctions.h"
+#include "ws2812.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -217,8 +218,11 @@ int main(void)
   initTimerHandlers(&htim6,&htim10);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   htim2.Instance->CCR1 = 50;
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  //htim9.Instance->CCR1 = 25;
+  //uncomment for tests in the channel
+  //HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  //htim1.Instance->CCR1 = 75;
+
+  HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
 
   /* USER CODE END 2 */
 
