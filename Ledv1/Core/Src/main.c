@@ -27,6 +27,7 @@
 #include "stdio.h"
 #include "userFunctions.h"
 #include "ws2812.h"
+#include "stripEffects.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,7 +106,7 @@ const osThreadAttr_t taskManager_attributes = {
   .stack_size = sizeof(taskManagerBuffer),
   .cb_mem = &taskManagerControlBlock,
   .cb_size = sizeof(taskManagerControlBlock),
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 
 /* Definitions for userSignal3 */
@@ -118,10 +119,24 @@ const osThreadAttr_t userSignal3_attributes = {
   .stack_size = sizeof(userSignal3Buffer),
   .cb_mem = &userSignal3ControlBlock,
   .cb_size = sizeof(userSignal3ControlBlock),
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+
+/* This thread sets the LED effect */
+osThreadId_t ledEffectHandle;
+uint32_t ledEffectBuffer[ 128 ];
+osStaticThreadDef_t ledEffectControlBlock;
+const osThreadAttr_t ledEffect_attributes = {
+  .name = "ledEffect",
+  .stack_mem = &ledEffectBuffer[0],
+  .stack_size = sizeof(ledEffectBuffer),
+  .cb_mem = &ledEffectControlBlock,
+  .cb_size = sizeof(ledEffectControlBlock),
   .priority = (osPriority_t) osPriorityNormal,
 };
 
 //functionPrototype
+void ledEffect(void *argument);
 void userSignal3(void *argument);
 
 
@@ -212,18 +227,18 @@ int main(void)
   //LED initialization code
   HAL_TIM_Base_Start(&htim10);
   WSdata1 = 0x00FF0000;
-  WSdata2 = 0x0000FF00;
+  WSdata2 = 0x0000FF00;	//TODO review whether this can be deleted
 
 
-  initTimerHandlers(&htim6,&htim10);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  htim2.Instance->CCR1 = 50;
+  initTimerHandlers(&htim6,&htim10,&htim1);
+  //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  //htim2.Instance->CCR1 = 50;
   //uncomment for tests in the channel
   //HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   //htim1.Instance->CCR1 = 75;
 
   HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
-
+  //htim1.Instance->CCR1 = 0;	//The PWM starts with Duty Cycle 0 //TODO this should be included in the same init function once it is in the library
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -247,18 +262,20 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of temperatureT */
-  temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
+  //temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
 
   /* creation of updateLeds */
-  updateLedsHandle = osThreadNew(startLeds, NULL, &updateLeds_attributes);
+  //updateLedsHandle = osThreadNew(startLeds, NULL, &updateLeds_attributes);
 
   /* creation of blinkLED */
-  blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
+  //blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
 
-  userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);
+  userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);	//TODO NULL should be the PWM timer
+  //Thread for LED effect
+  ledEffectHandle = osThreadNew(ledEffect, NULL, &ledEffect_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -288,7 +305,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
@@ -310,11 +327,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
@@ -329,6 +346,7 @@ static void MX_TIM1_Init(void)
 {
 
   /* USER CODE BEGIN TIM1_Init 0 */
+	fillBufferBlack();	//TODO This should be included in the final version of this init function that should be in the library
 
   /* USER CODE END TIM1_Init 0 */
 
@@ -344,7 +362,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 100-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.RepetitionCounter = 255;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {

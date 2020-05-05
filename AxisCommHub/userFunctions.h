@@ -12,11 +12,12 @@
 //Variables or handlers
 TIM_HandleTypeDef* usTimerHandler;
 TIM_HandleTypeDef* nsTimerHandler;
+TIM_HandleTypeDef* pwmHandler;
 
 void userDelay (uint16_t timeUnits, TIM_HandleTypeDef* timerHandler);
 
 
-void initTimerHandlers(TIM_HandleTypeDef* usHandlerPtr,TIM_HandleTypeDef* nsHandlerPtr);
+void initTimerHandlers(TIM_HandleTypeDef* usHandlerPtr,TIM_HandleTypeDef* nsHandlerPtr,TIM_HandleTypeDef* pwmHandlerPtr);
 int8_t startOneWire ();
 void setPinAsOutput (void);
 void setPinAsInput (void);

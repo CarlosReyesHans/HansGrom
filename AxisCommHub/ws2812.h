@@ -36,12 +36,12 @@
 #define RESET_SLOTS_END										(50)
 #define WS2812_LAST_SLOT									(1)
 #define LED_BUFFER_SIZE										(RESET_SLOTS_BEGIN + LED_DATA_SIZE + WS2812_LAST_SLOT + RESET_SLOTS_END)
-#define WS2812_0													(TIMER_PERIOD / 3)				// WS2812's zero high time is long about one third of the period
-#define WS2812_1													(TIMER_PERIOD * 2 / 3)		// WS2812's one high time is long about two thirds of the period
+#define WS2812_0													(33)//(TIMER_PERIOD / 3)				// TODO This is considering the current prescaler and base clock of 80Mhz WS2812's zero high time is long about one third of the period
+#define WS2812_1													(66)//(TIMER_PERIOD * 2 / 3)		// WS2812's one high time is long about two thirds of the period
 #define WS2812_RESET											(0)
 static uint8_t LEDbuffer[LED_BUFFER_SIZE];
 void ws2812_init(void);
-void ws2812_update(void);
+void ws2812_update(TIM_HandleTypeDef* pwmTempHandler);
 void setLEDcolor(uint32_t LEDnumber, uint8_t RED, uint8_t GREEN, uint8_t BLUE);
 void setWHOLEcolor(uint8_t RED, uint8_t GREEN, uint8_t BLUE);
 void fillBufferBlack(void);

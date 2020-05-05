@@ -89,10 +89,21 @@ void ws2812_init(void) {
 			LED_BUFFER_SIZE);
 }
 
-void ws2812_update(void) {
-	HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfig, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start_DMA(&TimHandle, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,
-			LED_BUFFER_SIZE);
+void ws2812_update(TIM_HandleTypeDef* pwmTempHandler) {
+	//Following was copied from the MX_TIM1_Init function TODO this data should be available in the library
+	TIM_OC_InitTypeDef sConfigOC = {0};
+	sConfigOC.OCMode = TIM_OCMODE_PWM1;
+	sConfigOC.Pulse = 0;
+	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+	//Here ends the copied code
+
+	HAL_TIM_PWM_ConfigChannel(pwmTempHandler, &sConfigOC, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start_DMA(pwmTempHandler, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
+
 }
 
 void setLEDcolor(uint32_t LEDnumber, uint8_t RED, uint8_t GREEN, uint8_t BLUE) {
