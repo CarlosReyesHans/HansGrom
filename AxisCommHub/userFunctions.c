@@ -12,6 +12,7 @@
 #include "userFunctions.h"
 #include "stripEffects.h"
 #include "ws2812.h"
+#include "WS2812_Lib.h"
 /*
  *  DS18B20	Temperature Sensor
  */
@@ -256,22 +257,24 @@ void setOutputWSLED (void) {
  * @brief	This is the function for user Signal 3 thread that will update @66Hz the WS2812
  *
  */
-void userSignal3(void *argument) {
-	printf("Recurrent update task for ws2812 started\n");
-	while(1) {
-		HAL_GPIO_TogglePin(userSignal3_GPIO_Port, userSignal3_Pin);
-		ws2812_update(pwmHandler);
-		osDelay(15);
-		//userDelay(40, nsTimerHandler);
-	}
-}
+//void userSignal3(void *argument) {
+//	printf("Recurrent update task for ws2812 started\n");
+//	while(1) {
+//		HAL_GPIO_TogglePin(userSignal3_GPIO_Port, userSignal3_Pin);
+//		ws2812_update(pwmHandler);
+//		osDelay(15);
+//		//userDelay(40, nsTimerHandler);
+//	}
+//}
 
 /*
  * @brief	This is the call function for user ledEffect thread for the WS2812
  *
  */
-void ledEffect(void *argument) {
-	printf("ledEffect function called\n");
-	stripEffect_CircularRing(50,0,0,20);
-}
+//void ledEffect(void *argument) {
+//	printf("ledEffect function called\n");
+//	stripEffect_CircularRing(50,0,0,20);
+//}
+
+
 

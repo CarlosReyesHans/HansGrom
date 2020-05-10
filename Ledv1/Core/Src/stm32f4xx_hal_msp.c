@@ -22,7 +22,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
-
+#include "WS2812_lib.h"
 /* USER CODE END Includes */
 extern DMA_HandleTypeDef hdma_tim1_ch1;
 
@@ -105,11 +105,11 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     hdma_tim1_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim1_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_tim1_ch1.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_tim1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_tim1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_tim1_ch1.Init.Mode = DMA_CIRCULAR;
+    hdma_tim1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_tim1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_tim1_ch1.Init.Mode = DMA_NORMAL;
     hdma_tim1_ch1.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_tim1_ch1.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+    hdma_tim1_ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     hdma_tim1_ch1.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
     hdma_tim1_ch1.Init.MemBurst = DMA_MBURST_SINGLE;
     hdma_tim1_ch1.Init.PeriphBurst = DMA_PBURST_SINGLE;

@@ -26,8 +26,11 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "userFunctions.h"
-#include "ws2812.h"
-#include "stripEffects.h"
+//For first attempt
+//#include "ws2812.h"
+//#include "stripEffects.h"
+//For LED second attempt
+#include "WS2812_Lib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,11 +49,11 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-TIM_HandleTypeDef htim1;
+//TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim10;
-DMA_HandleTypeDef hdma_tim1_ch1;
+//DMA_HandleTypeDef hdma_tim1_ch1;
 
 UART_HandleTypeDef huart3;
 
@@ -134,10 +137,23 @@ const osThreadAttr_t ledEffect_attributes = {
   .cb_size = sizeof(ledEffectControlBlock),
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* This thread sets the LED effect */
+osThreadId_t ledAttempt2Handle;
+uint32_t ledAttempt2Buffer[ 128 ];
+osStaticThreadDef_t ledAttempt2ControlBlock;
+const osThreadAttr_t ledAttempt2_attributes = {
+  .name = "ledAttempt2",
+  .stack_mem = &ledAttempt2Buffer[0],
+  .stack_size = sizeof(ledAttempt2Buffer),
+  .cb_mem = &ledAttempt2ControlBlock,
+  .cb_size = sizeof(ledAttempt2ControlBlock),
+  .priority = (osPriority_t) osPriorityAboveNormal1,
+};
 
 //functionPrototype
 void ledEffect(void *argument);
 void userSignal3(void *argument);
+void ledAttempt2(void *argument);
 
 
 
@@ -237,7 +253,8 @@ int main(void)
   //HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   //htim1.Instance->CCR1 = 75;
 
-  HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
+  //This is for LED first attempt
+  //HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
   //htim1.Instance->CCR1 = 0;	//The PWM starts with Duty Cycle 0 //TODO this should be included in the same init function once it is in the library
   /* USER CODE END 2 */
 
@@ -272,10 +289,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  //Thread for LED effect of first Library attempt
+  //userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);	//TODO NULL should be the PWM timer
+  //ledEffectHandle = osThreadNew(ledEffect, NULL, &ledEffect_attributes);
+  //Superloop for LED effect of second Library attempt
+  ledAttempt2Handle = osThreadNew(ledAttempt2, NULL, &ledAttempt2_attributes);
 
-  userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);	//TODO NULL should be the PWM timer
-  //Thread for LED effect
-  ledEffectHandle = osThreadNew(ledEffect, NULL, &ledEffect_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -346,7 +365,8 @@ static void MX_TIM1_Init(void)
 {
 
   /* USER CODE BEGIN TIM1_Init 0 */
-	fillBufferBlack();	//TODO This should be included in the final version of this init function that should be in the library
+	//This is for first attempt
+	//fillBufferBlack();	//TODO This should be included in the final version of this init function that should be in the library
 
   /* USER CODE END TIM1_Init 0 */
 
@@ -362,7 +382,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 100-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 255;
+  //htim1.Init.RepetitionCounter = 255;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
@@ -665,6 +685,31 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//TODO this definition should be in a library
+/*
+ * @brief	This is the call function for the second attempt to control the WS2812
+ */
+
+void ledAttempt2(void *argument){
+	printf("led attempt2 function called\n");
+
+	  //This uses the WS2812 instead of WS2812b
+	  uint8_t inc =0;
+	  WS2812_HSV_t hsv_color;
+
+	  hsv_color.v = 255;
+	  hsv_color.s = 255;
+
+	while (1) {
+		WS2812_Shift_Right(0);
+		WS2812_One_HSV(0, hsv_color, 1);
+
+		hsv_color.h=(hsv_color.h > 339)?0: hsv_color.h + 20;
+
+		osDelay(150);
+	}
+
+}
 
 /* USER CODE END 4 */
 

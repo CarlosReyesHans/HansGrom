@@ -19,7 +19,7 @@
 #define GPIO_AF_TIMx                     	GPIO_AF1_TIM2
 
 /* Definition for TIMx's DMA */
-#define TIMx_CC1_DMA_REQUEST             	DMA_REQUEST_4
+//#define TIMx_CC1_DMA_REQUEST             	DMA_REQUEST_4
 #define TIMx_CC1_DMA_INST                	DMA_CHANNEL_6
 
 /* Definition for DMAx's NVIC */
