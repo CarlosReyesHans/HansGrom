@@ -9,13 +9,22 @@
 
 uint16_t WS2812_TIM_BUF[WS2812_BUFLEN];
 uint8_t dma_ready = 1;
+uint8_t buffer_updated = 0;
+
+/**
+ * @brief	This callback belongs to DMA after has finished to push the buffer.
+ * 				Keep in mind that refresh function does not run if dma has not sent the data.
+ *
+ */
 
 void DMA_Callback(void) {
 	dma_ready = 1;
+	buffer_updated = 0;
 }
 
 /**
- * Internal function, calculates the HI or LO values for the 800 kHz WS2812 signal and puts them into a buffer for the Timer-DMA
+ * @brief	Internal function, calculates the HI or LO values for the 800 kHz WS2812 signal and puts them into a buffer for the Timer-DMA
+ * 				After the update the global buffer_updated flag is set.
  *
  */
 void calcBuf(void)
@@ -64,6 +73,8 @@ void calcBuf(void)
   for(n=0;n<48;n++) {
     WS2812_TIM_BUF[pos++]=0;
   }
+  //	updates the global flag for buffer updated
+  buffer_updated = 1;
 }
 
 /**

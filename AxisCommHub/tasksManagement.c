@@ -15,7 +15,7 @@
  */
 
 void ws2812task(void *argument){
-	printf("led attempt2 function called\n");
+	printf("ws2812task function called\n");
 
 	  //This uses the WS2812 instead of WS2812b
 	  uint8_t inc =0;

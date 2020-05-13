@@ -284,7 +284,7 @@ void sendError(uint8_t errorNr) {
 	char temp[20];
 		switch (errorNr) {
 		    case ERROR_DMA:
-		      printf("no initializing DMA\n");
+		      printf("no initializing DMA/buffer up\n");
 		      break;
 
 		    case ERROR_2:

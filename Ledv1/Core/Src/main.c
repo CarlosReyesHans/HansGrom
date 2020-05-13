@@ -164,7 +164,8 @@ uint8_t count,Temp_byte1,Temp_byte2,tempErrorCounter,errorType;
 
 int16_t temperature;
 float temp_float;
-extern uint8_t dma_ready;
+extern uint8_t dma_ready, buffer_updated;	//Can this be within the h file?
+
 
 /* USER CODE END PV */
 
@@ -764,7 +765,7 @@ void refreshRing(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	if(dma_ready)
+	if(dma_ready && buffer_updated)
 		startDMA();
 	else
 		sendError(ERROR_DMA);
