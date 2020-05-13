@@ -49,11 +49,11 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-//TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim10;
-//DMA_HandleTypeDef hdma_tim1_ch1;
+DMA_HandleTypeDef hdma_tim1_ch1;
 
 UART_HandleTypeDef huart3;
 
@@ -69,12 +69,17 @@ const osThreadAttr_t temperatureT_attributes = {
   .cb_size = sizeof(temperatureTControlBlock),
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for updateLeds */
-osThreadId_t updateLedsHandle;
-const osThreadAttr_t updateLeds_attributes = {
-  .name = "updateLeds",
+/* Definitions for refreshWS2812 */
+osThreadId_t refreshWS2812Handle;
+uint32_t refreshWS2812Buffer[ 128 ];
+osStaticThreadDef_t refreshWS2812ControlBlock;
+const osThreadAttr_t refreshWS2812_attributes = {
+  .name = "refreshWS2812",
+  .stack_mem = &refreshWS2812Buffer[0],
+  .stack_size = sizeof(refreshWS2812Buffer),
+  .cb_mem = &refreshWS2812ControlBlock,
+  .cb_size = sizeof(refreshWS2812ControlBlock),
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
 };
 /* Definitions for blinkLED */
 osThreadId_t blinkLEDHandle;
@@ -138,34 +143,27 @@ const osThreadAttr_t ledEffect_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* This thread sets the LED effect */
-osThreadId_t ledAttempt2Handle;
-uint32_t ledAttempt2Buffer[ 128 ];
-osStaticThreadDef_t ledAttempt2ControlBlock;
-const osThreadAttr_t ledAttempt2_attributes = {
-  .name = "ledAttempt2",
-  .stack_mem = &ledAttempt2Buffer[0],
-  .stack_size = sizeof(ledAttempt2Buffer),
-  .cb_mem = &ledAttempt2ControlBlock,
-  .cb_size = sizeof(ledAttempt2ControlBlock),
+osThreadId_t ws2812taskHandle;
+uint32_t ws2812taskBuffer[ 128 ];
+osStaticThreadDef_t ws2812taskControlBlock;
+const osThreadAttr_t ws2812task_attributes = {
+  .name = "ws2812task",
+  .stack_mem = &ws2812taskBuffer[0],
+  .stack_size = sizeof(ws2812taskBuffer),
+  .cb_mem = &ws2812taskControlBlock,
+  .cb_size = sizeof(ws2812taskControlBlock),
   .priority = (osPriority_t) osPriorityAboveNormal1,
 };
 
 //functionPrototype
 void ledEffect(void *argument);
 void userSignal3(void *argument);
-void ledAttempt2(void *argument);
-
-
-
+void ws2812task(void *argument);
 
 uint8_t count,Temp_byte1,Temp_byte2,errorCounter;
 
 int16_t temperature;
 float temp_float;
-
-//These variables should go away
-uint32_t WSdata1, WSdata2;
-uint32_t WSdata[] = {0x0000ff,0x00ff00, 0xff0000,0x0000ff,0x00ff00, 0xff0000,0xffff00,0x00ffff,0xff00ff};
 
 /* USER CODE END PV */
 
@@ -179,7 +177,7 @@ static void MX_TIM10_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM1_Init(void);
 void runTemperature(void *argument);
-void startLeds(void *argument);
+void refreshRing(void *argument);
 void blinkingLED(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -242,9 +240,6 @@ int main(void)
   errorCounter = 0;
   //LED initialization code
   HAL_TIM_Base_Start(&htim10);
-  WSdata1 = 0x00FF0000;
-  WSdata2 = 0x0000FF00;	//TODO review whether this can be deleted
-
 
   initTimerHandlers(&htim6,&htim10,&htim1);
   //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
@@ -253,9 +248,6 @@ int main(void)
   //HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   //htim1.Instance->CCR1 = 75;
 
-  //This is for LED first attempt
-  //HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t *) LEDbuffer,LED_BUFFER_SIZE);
-  //htim1.Instance->CCR1 = 0;	//The PWM starts with Duty Cycle 0 //TODO this should be included in the same init function once it is in the library
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -279,13 +271,13 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of temperatureT */
-  //temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
+  temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
 
-  /* creation of updateLeds */
-  //updateLedsHandle = osThreadNew(startLeds, NULL, &updateLeds_attributes);
+  /* creation of refreshWS2812 */
+  refreshWS2812Handle = osThreadNew(refreshRing, NULL, &refreshWS2812_attributes);
 
   /* creation of blinkLED */
-  //blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
+  blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -293,7 +285,7 @@ int main(void)
   //userSignal3Handle = osThreadNew(userSignal3, NULL, &userSignal3_attributes);	//TODO NULL should be the PWM timer
   //ledEffectHandle = osThreadNew(ledEffect, NULL, &ledEffect_attributes);
   //Superloop for LED effect of second Library attempt
-  ledAttempt2Handle = osThreadNew(ledAttempt2, NULL, &ledAttempt2_attributes);
+  ws2812taskHandle = osThreadNew(ws2812task, NULL, &ws2812task_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -382,7 +374,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 100-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  //htim1.Init.RepetitionCounter = 255;
+  htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
@@ -685,31 +677,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//TODO this definition should be in a library
-/*
- * @brief	This is the call function for the second attempt to control the WS2812
- */
 
-void ledAttempt2(void *argument){
-	printf("led attempt2 function called\n");
-
-	  //This uses the WS2812 instead of WS2812b
-	  uint8_t inc =0;
-	  WS2812_HSV_t hsv_color;
-
-	  hsv_color.v = 255;
-	  hsv_color.s = 255;
-
-	while (1) {
-		WS2812_Shift_Right(0);
-		WS2812_One_HSV(0, hsv_color, 1);
-
-		hsv_color.h=(hsv_color.h > 339)?0: hsv_color.h + 20;
-
-		osDelay(150);
-	}
-
-}
 
 /* USER CODE END 4 */
 
@@ -733,7 +701,7 @@ void runTemperature(void *argument)
 	  char numberString[7];
 	  printf("Temperature Task Loop\n");
 
-	  printf("Temperature will fnish\n");
+	  printf("Temperature will finish\n");
 	  osThreadTerminate(temperatureTHandle);
 
 	  if(startOneWire() == -1)
@@ -781,30 +749,22 @@ void runTemperature(void *argument)
   /* USER CODE END 5 */ 
 }
 
-/* USER CODE BEGIN Header_startLeds */
+/* USER CODE BEGIN Header_refreshRing */
 /**
-* @brief Function implementing the updateLeds thread.
+* @brief Function implementing the refreshWS2812 thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_startLeds */
-void startLeds(void *argument)
+/* USER CODE END Header_refreshRing */
+void refreshRing(void *argument)
 {
-  /* USER CODE BEGIN startLeds */
+  /* USER CODE BEGIN refreshRing */
   /* Infinite loop */
   for(;;)
   {
-	//printf("Led Task v1 Loop\n");
-	  resetWSLED();
-	  for (uint8_t i=0 ; i<9 ; i++) {
-		  writeWSLED(WSdata[i]);
-	  }
-
-
-    osDelay(1000);
-	  //userDelay(100, usTimerHandler);
+    osDelay(1);
   }
-  /* USER CODE END startLeds */
+  /* USER CODE END refreshRing */
 }
 
 /* USER CODE BEGIN Header_blinkingLED */

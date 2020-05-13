@@ -2,7 +2,6 @@
 #define __STRIPEFFECTS
 
 #include "main.h"
-#include "ws2812.h"
 
 #define HEARTBEAT_STEPS		16
 

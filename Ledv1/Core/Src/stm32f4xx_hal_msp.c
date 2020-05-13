@@ -108,11 +108,8 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     hdma_tim1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     hdma_tim1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     hdma_tim1_ch1.Init.Mode = DMA_NORMAL;
-    hdma_tim1_ch1.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_tim1_ch1.Init.Priority = DMA_PRIORITY_MEDIUM;
     hdma_tim1_ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    hdma_tim1_ch1.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    hdma_tim1_ch1.Init.MemBurst = DMA_MBURST_SINGLE;
-    hdma_tim1_ch1.Init.PeriphBurst = DMA_PBURST_SINGLE;
     if (HAL_DMA_Init(&hdma_tim1_ch1) != HAL_OK)
     {
       Error_Handler();

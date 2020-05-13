@@ -11,7 +11,6 @@
 
 #include "userFunctions.h"
 #include "stripEffects.h"
-#include "ws2812.h"
 #include "WS2812_Lib.h"
 /*
  *  DS18B20	Temperature Sensor
