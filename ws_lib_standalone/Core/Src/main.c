@@ -113,9 +113,10 @@ int main(void)
 	  uint8_t inc =0;
 	  WS2812_HSV_t hsv_color;
 
-
-	  hsv_color.v = 255;
+	  hsv_color.h = 240;
+	  hsv_color.v = 5;
 	  hsv_color.s = 255;
+	  WS2812_Clear();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -126,8 +127,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+
 	  WS2812_All_HSV(hsv_color,1);
-	  HAL_Delay(50);
+	  HAL_Delay(1000);
 	  //WS2812_Clear();
 	  //HAL_Delay(1000);
 		//WS2812_Shift_Right(0);

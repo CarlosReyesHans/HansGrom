@@ -13,7 +13,7 @@
 TIM_HandleTypeDef htim1;//htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
-#define WS2812_NUM_LEDS_CH1		46	//58
+#define WS2812_NUM_LEDS_CH1		70	//58
 
 #define  WS2812_TIM_PRESCALE    0  // F_T3  = 72 MHz (13.88ns)
 #define  WS2812_TIM_PERIODE   	100-1  // F_PWM = 800 kHz (1.25us)
