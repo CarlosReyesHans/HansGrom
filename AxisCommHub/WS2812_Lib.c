@@ -79,7 +79,7 @@ void WS2812_Refresh(void) {
 
 	while(!dma_ready);
 	calcBuf();
-	startDMA();
+	//startDMA();		//Todo This has been deactivated to test it with Task Management
 }
 
 /**

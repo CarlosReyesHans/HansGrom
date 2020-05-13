@@ -13,7 +13,7 @@
 TIM_HandleTypeDef htim1;//htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
-#define WS2812_NUM_LEDS_CH1		70	//58
+#define WS2812_NUM_LEDS_CH1		70	//58)
 
 #define  WS2812_TIM_PRESCALE    0  // F_T3  = 72 MHz (13.88ns)
 #define  WS2812_TIM_PERIODE   	100-1  // F_PWM = 800 kHz (1.25us)
@@ -21,6 +21,8 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 #define  WS2812_LO_TIME        	33  // 33 * 13,9ns = 0.43us
 #define  WS2812_HI_TIME        	66  // 66 * 13.9ns = 0.81us
 
+#define	WS2812_MIN_REFRESH_TIME		(1.25*24*WS2812_NUM_LEDS_CH1+50)/1000	//This is 2.15 ms for 70 LEDS
+#define	WS2812_REFRESH_TIME			20		//ms, 33ms -> 30 Hz; 20 -> 50Hz : Each Refresh time the WSB2812 will be updated
 //--------------------------------------------------------------
 // RGB LED Farbdefinition (3 x 8bit)
 //--------------------------------------------------------------

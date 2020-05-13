@@ -8,6 +8,12 @@
 #ifndef SRC_USERFUNCTIONS_H_
 #define SRC_USERFUNCTIONS_H_
 
+//Errors
+
+#define ERROR_DMA	1
+#define ERROR_2		2
+
+
 #include "main.h"
 //Variables or handlers
 TIM_HandleTypeDef* usTimerHandler;

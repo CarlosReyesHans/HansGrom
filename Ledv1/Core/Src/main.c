@@ -160,10 +160,11 @@ void ledEffect(void *argument);
 void userSignal3(void *argument);
 void ws2812task(void *argument);
 
-uint8_t count,Temp_byte1,Temp_byte2,errorCounter;
+uint8_t count,Temp_byte1,Temp_byte2,tempErrorCounter,errorType;
 
 int16_t temperature;
 float temp_float;
+extern uint8_t dma_ready;
 
 /* USER CODE END PV */
 
@@ -237,7 +238,8 @@ int main(void)
   setPinAsInput();
   HAL_Delay(500);
   count = 0;
-  errorCounter = 0;
+  tempErrorCounter = 0;
+  errorType = 0;
   //LED initialization code
   HAL_TIM_Base_Start(&htim10);
 
@@ -271,13 +273,13 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of temperatureT */
-  temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
+  //temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
 
   /* creation of refreshWS2812 */
   refreshWS2812Handle = osThreadNew(refreshRing, NULL, &refreshWS2812_attributes);
 
   /* creation of blinkLED */
-  blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
+  //blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -705,7 +707,7 @@ void runTemperature(void *argument)
 	  osThreadTerminate(temperatureTHandle);
 
 	  if(startOneWire() == -1)
-	  	  errorCounter++;
+	  	  tempErrorCounter++;
 	  //userDelayUs(1, usTimerHandler);
 	  osDelay(1);
 
@@ -714,7 +716,7 @@ void runTemperature(void *argument)
 	  osDelay(760);
 
 	  if(startOneWire() == -1)
-	  	  errorCounter++;
+	  	  tempErrorCounter++;
 	  osDelay(1);
 	  writeOneWire (0xCC);  // skip ROM
 	  writeOneWire (0xBE);  // Read Scratch-pad
@@ -735,7 +737,7 @@ void runTemperature(void *argument)
 	  if (count > 20)
 		  count = 0;
 
-	  if (errorCounter > 10)
+	  if (tempErrorCounter > 10)
 		  __NOP();
 
 	  //if (float2string(temp_float, numberString))
@@ -762,7 +764,11 @@ void refreshRing(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	if(dma_ready)
+		startDMA();
+	else
+		sendError(ERROR_DMA);
+    osDelay(WS2812_REFRESH_TIME);
   }
   /* USER CODE END refreshRing */
 }

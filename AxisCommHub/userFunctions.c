@@ -275,5 +275,25 @@ void setOutputWSLED (void) {
 //	stripEffect_CircularRing(50,0,0,20);
 //}
 
+/*
+ * @brief	Following function is the first attempt to handle erros
+ * @param	Is a defined Macro with a uint8_t value to be indentified.
+ *
+ */
+void sendError(uint8_t errorNr) {
+	char temp[20];
+		switch (errorNr) {
+		    case ERROR_DMA:
+		      printf("no initializing DMA\n");
+		      break;
+
+		    case ERROR_2:
+		      printf("second error \n");
+		      break;
+
+		    default:
+		      printf("error not defined \n");
+		}
+}
 
 
