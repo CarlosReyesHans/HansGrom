@@ -39,10 +39,15 @@ Thumbs.db
 # ignore a specific directory #
 ###############################
 **/.settings
+**/.metadata
 **/Debug
 **/Drivers
 **/Middlewares
+**/RemoteSystemsTempFiles
 *.launch
 *.ld
+*.cproject
+*.mxproject
+*.project
 **/syscalls.c
 **/system.c
