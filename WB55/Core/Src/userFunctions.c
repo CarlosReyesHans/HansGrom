@@ -4,6 +4,12 @@
  *  Created on: May 19, 2020
  *      Author: JC
  */
+
+
+/*
+ * 	This Application runs 2 tasks with the parameters defined in an external file, namely the userFunctions.c
+ * */
+
 #include "main.h"
 #include "cmsis_os.h"
 #include "userFunctions.h"
