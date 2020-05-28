@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "userFunctions.h"
+#include "LAN9252_spi_temp.h"
 //For first attempt
 //#include "ws2812.h"
 //#include "stripEffects.h"
@@ -49,6 +50,10 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi4;
+DMA_HandleTypeDef hdma_spi4_rx;
+DMA_HandleTypeDef hdma_spi4_tx;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
@@ -166,6 +171,9 @@ int16_t temperature;
 float temp_float;
 extern uint8_t dma_ready, buffer_updated;	//Can this be within the h file?
 
+extern osThreadId_t ecatInitTHandle;
+extern const osThreadAttr_t ecatInitT_attributes;
+
 
 /* USER CODE END PV */
 
@@ -178,6 +186,7 @@ static void MX_TIM6_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_SPI4_Init(void);
 void runTemperature(void *argument);
 void refreshRing(void *argument);
 void blinkingLED(void *argument);
@@ -231,6 +240,7 @@ int main(void)
   MX_TIM10_Init();
   MX_TIM2_Init();
   MX_TIM1_Init();
+  MX_SPI4_Init();
   /* USER CODE BEGIN 2 */
   printf("initializing...");
   //Temperature initialization code
@@ -274,13 +284,13 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of temperatureT */
-  //temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
+  temperatureTHandle = osThreadNew(runTemperature, NULL, &temperatureT_attributes);
 
   /* creation of refreshWS2812 */
   refreshWS2812Handle = osThreadNew(refreshRing, NULL, &refreshWS2812_attributes);
 
   /* creation of blinkLED */
-  //blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
+  blinkLEDHandle = osThreadNew(blinkingLED, NULL, &blinkLED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -289,6 +299,8 @@ int main(void)
   //ledEffectHandle = osThreadNew(ledEffect, NULL, &ledEffect_attributes);
   //Superloop for LED effect of second Library attempt
   ws2812taskHandle = osThreadNew(ws2812task, NULL, &ws2812task_attributes);
+  //This belongs to ECAT Development
+  ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -343,12 +355,50 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief SPI4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI4_Init(void)
+{
+
+  /* USER CODE BEGIN SPI4_Init 0 */
+
+  /* USER CODE END SPI4_Init 0 */
+
+  /* USER CODE BEGIN SPI4_Init 1 */
+
+  /* USER CODE END SPI4_Init 1 */
+  /* SPI4 parameter configuration*/
+  hspi4.Instance = SPI4;
+  hspi4.Init.Mode = SPI_MODE_MASTER;
+  hspi4.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi4.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi4.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi4.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi4.Init.NSS = SPI_NSS_HARD_OUTPUT;
+  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi4.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi4.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi4.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi4.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI4_Init 2 */
+
+  /* USER CODE END SPI4_Init 2 */
+
 }
 
 /**
@@ -589,9 +639,15 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
   /* DMA2_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+  /* DMA2_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 
 }
 
@@ -605,12 +661,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */

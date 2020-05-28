@@ -60,6 +60,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define ECAT_SCK_Pin GPIO_PIN_2
+#define ECAT_SCK_GPIO_Port GPIOE
+#define ECAT_SCS_Pin GPIO_PIN_4
+#define ECAT_SCS_GPIO_Port GPIOE
+#define ECAT_MISO_Pin GPIO_PIN_5
+#define ECAT_MISO_GPIO_Port GPIOE
+#define ECAT_MOSI_Pin GPIO_PIN_6
+#define ECAT_MOSI_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
