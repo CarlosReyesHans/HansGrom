@@ -14,7 +14,7 @@
 #define	TEST_BYTE_RESULT_H	0x43
 #define	TEST_BYTE_RESULT_L	0x21
 #define	CMD_FASTREAD		0x0B
-#define DUMMY_BYTE			0x00
+#define DUMMY_BYTE			0xFF
 
 
 void ecatInitFunc(void * argument);

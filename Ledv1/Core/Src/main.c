@@ -243,6 +243,9 @@ int main(void)
   MX_SPI4_Init();
   /* USER CODE BEGIN 2 */
   printf("initializing...");
+  //This is code for SPI
+  //hspi4.Instance->CR2 &= ~(1<<SPI_CR2_SSOE_Pos);
+  //HAL_GPIO_WritePin(ECAT_SCS_GPIO_Port, ECAT_SCS_Pin, GPIO_PIN_SET);
   //Temperature initialization code
   HAL_TIM_Base_Start(&htim6);
 
@@ -386,7 +389,7 @@ static void MX_SPI4_Init(void)
   hspi4.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi4.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi4.Init.NSS = SPI_NSS_HARD_OUTPUT;
-  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi4.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi4.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi4.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -844,9 +847,9 @@ void blinkingLED(void *argument)
   for(;;)
   {
 	  //printf("UserSignal generated \n");
-	  HAL_GPIO_TogglePin(userSignal2_GPIO_Port,userSignal2_Pin);
-    //osDelay(1000);
-    userDelay(100, usTimerHandler);
+	//HAL_GPIO_TogglePin(userSignal2_GPIO_Port,userSignal2_Pin);
+    osDelay(1000);
+    //userDelay(100, usTimerHandler);
   }
   /* USER CODE END blinkingLED */
 }
