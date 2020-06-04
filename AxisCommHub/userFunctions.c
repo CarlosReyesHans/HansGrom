@@ -12,6 +12,11 @@
 
 
 
+/*--------------------------------------------------------Variables for LED SM--------------------------------------------------------------------------*/
+
+
+
+
 /*
  * @brief	This function uses a timer to create a base time delay of 1 us
  * @param	The time in microseconds
@@ -178,4 +183,16 @@ int8_t float2string(float floatValue, char* stringArray){	//TODO This function c
 
 	return 1;
 
+}
+
+/* *
+ * @brief	This function helps debug the code over uart
+ * */
+
+int _write(int file, char *ptr, int len){
+	int i=0;
+	for (i=0; i<len; i++){
+		ITM_SendChar((*ptr++));
+	}
+	return len;
 }

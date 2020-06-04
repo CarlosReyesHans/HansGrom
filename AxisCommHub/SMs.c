@@ -6,6 +6,8 @@
  */
 #include "cmsis_os.h"
 #include "main.h"
+#include "userFunctions.h"
+#include "stdio.h"
 
 //Creation of tasks concerning the State Machines
 
@@ -62,15 +64,10 @@ enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publi
 enum enum_ledRingStates {L_config,L_start,L_sleep,L_waitDMA,L_updateEffect,l_waitRefresh,L_updateColor,L_restart,L_error }led_step;
 enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep}ecat_step;
 enum enum_eventHStates {evH_waiting, evH_reportErr,evH_notifyEv,evH_finish}evH_step;
-enum enum_events {error_critical,error_non_critical,warning,event_success};
+enum enum_events {error_critical,error_non_critical,warning,event_success}eventType;
 
 
-/******************************************* USART Space *********************************************************************/
 
-uint32_t temperatureBuffer2Print[NUM_OF_SENSORS];
-int8_t example_temperatureBuffer2Print[4] = {23,-44,-23,56};	//This is temporary
-uint8_t	ecatBuffer2Print[10] = {'e','C','A','T',' ','1','2','3','4','\n'}; //this is temporary
-uint8_t currentStates2Print[10];
 
 
 /******************************************* Event Handler Space *********************************************************************/
@@ -86,19 +83,21 @@ extern TIM_HandleTypeDef spi1;	//TODO this should be defined by the MX and as SP
 volatile uint8_t ecatDMArcvd,ecTimedOut;	//TODO This is modified by interruptions
 
 
-//	Declaring some structures needed for configuration of LED RINGS SM
+/******************************************* LED Rings Space *********************************************************************/
 #define MAX_OF_LEDRINGS	4		//The functions are set for only 2, 4 needs modifications
 #define NUM_OF_LEDRINGS	2
+#define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
 #define EFFECTS_ACTIVATED	0
 #define	EFFECT_REFRESH_PERIOD	10	//TODO this sn=hould be linked to the library times the refresh period
 #define	PWM_REFRESH_PERIOD		30	//TODO this should be linked to the library in ms
 
-volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification
+volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
 volatile uint8_t PWM1DMArcvd, PWM2DMArcvd;
 volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
+volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
 
 
-//	Declaring some structures needed for configuration of TEMPERATURE SENSORS SM
+/******************************************* Temperature Sensors SM Space *********************************************************************/
 //struct temp	//TODO This should be an struct to better handling
 #define	NUM_OF_SENSORS	3
 #define	TRUE	1
@@ -106,6 +105,8 @@ volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a 
 #define FAILED	-1
 
 #define TEMP_READOUT_PERIOD	100		//in ms
+
+int32_t	temperatureData[NUM_OF_SENSORS];
 
 //	Declaration of errors
 #define	ERR_SENSOR_INIT		10
@@ -121,6 +122,13 @@ volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a 
 #define EV_ECAT_VERIFIED	30
 #define EV_ECAT_READY		31
 
+
+/******************************************* USART Space *********************************************************************/
+
+uint32_t temperatureBuffer2Print[NUM_OF_SENSORS];
+int8_t example_temperatureBuffer2Print[4] = {23,-44,-23,56};	//This is temporary
+uint8_t	example_ecatBuffer2Print[10] = {'e','C','A','T',' ','1','2','3','4','\n'}; //this is temporary
+uint8_t currentStates2Print[10];
 
 
 
@@ -152,8 +160,8 @@ void tempSens_SM (void * argument) {
 			case	t_config:
 				for (uint8_t i=0; i<NUM_OF_SENSORS; i++) {
 					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
-					if (config1WireCh(i)) {
-						if(start1WireCh(i))
+					if (tsens_config1WireCh(i)) {
+						if(tsens_start1WireCh(i))
 							chsetupOK[i] = TRUE;
 						else
 							chsetupOK[i] = FALSE;
@@ -164,7 +172,7 @@ void tempSens_SM (void * argument) {
 						}
 					}
 				//exit
-				if (error) reportError(ERR_SENSOR_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
+				if (error) notifyError(ERR_SENSOR_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				error = 0;		//TODO should this be global and be working in another SM
 				tS_step = t_chk_chs;
 
@@ -174,7 +182,7 @@ void tempSens_SM (void * argument) {
 				activeChs = 0; 	//Each new iteration of chk_chs state should reset the counter of active channels, since there could be a communication problem
 				for (uint8_t i=0; i<NUM_OF_SENSORS; i++) {
 					if (chsetupOK[i]) {
-						if (check1WireCh() == FAILED) {
+						if (tsens_check1WireCh(i) == FAILED) {
 							error++;
 							chsetupOK[i] = FALSE;
 						}
@@ -184,36 +192,35 @@ void tempSens_SM (void * argument) {
 					}
 				}
 				//exit
-				if (error) reportError(ERR_SENSOR_LOST);	//TODO this should be sort of a signal, this should not stop the execution of this SM
+				if (error) notifyError(ERR_SENSOR_LOST);	//TODO this should be sort of a signal, this should not stop the execution of this SM
 					error = 0;		//TODO should this be global and be working in another SM
 				tS_step = t_read_chs;
 
 				break;
 			case	t_read_chs:
-				read1Wire(chsetupOK);	//<< this activates the DMA, readout data only from active channel
+				tsens_read1Wire(chsetupOK);	//<< this activates the DMA, readout data only from active channel
 				startTimeOut(2000);
 
 				//exit
 				if(DMAreceived) tS_step = t_eval_data;	//TODO DMAReceived should be changed by interruption
 
 				if(timedOut) {
-					reportError(ERR_SENSOR_TIMEOUT);
+					notifyError(ERR_SENSOR_TIMEOUT);
 					tS_step = t_chk_chs;
-				} 	//TODO A Timer OS or Hardware should change this
+				} 	//CHKME A Timer OS or Hardware should change this
 				break;
 			case	t_eval_data:
 				//TODO DMA interruption should update a buffer with the data
-				evalTempData(evalChData);
+				tsens_evalTSensData(temperatureData,evalChData);
 				for (uint8_t i=0; i<activeChs ; i++) {
-					if (evalChData[i]) reportChError(chsetupOK,i);	//TODO special Error handler for overheating, it maps the channel with error
+					if (evalChData[i]) evh_reportChError(chsetupOK,i);	// Creates a signal/event to EventHandler
 				}
-
 				//exit
 				tS_step = t_publish_data;
 				break;
 			case	t_publish_data:
-				updateTemp2eCAT();		// High Priority
-				updateTemp2Print();		// Low Priority TODO this might represent a possible race condition
+				updateTemp2ecat();		// High Priority of this may lead to the use of YIELD Function CHCKME
+				//The data that will be publish over UART is handled by the low priority task of uart
 				//exit
 				tS_step = t_sleep;
 				break;
@@ -224,10 +231,9 @@ void tempSens_SM (void * argument) {
 				break;
 			default:
 				__NOP();
-			}
+
+		}
 	}
-
-
 }
 
 /*
@@ -246,7 +252,7 @@ void ledRings_SM (void * argument) {
 
 					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
 				if (NUM_OF_LEDRINGS > 0) {
-					if(configPWMCh(pwm1))
+					if(ledDMA_configCh(&pwm1) != FAILED)
 						chsetupOK[0] = TRUE;
 					else {
 						chsetupOK[0] = FALSE;
@@ -254,7 +260,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(configPWMCh(pwm2))
+					if(ledDMA_configCh(&pwm2) != FAILED)
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -264,11 +270,11 @@ void ledRings_SM (void * argument) {
 				//if (NUM_OF_LEDRINGS > 2)
 				//if (NUM_OF_LEDRINGS > 3)
 
-				EFFECTS_ACTIVATED ? setInitEffects() : setInitColors();
+				EFFECTS_ACTIVATED ? led_setInitEffects() : led_setInitColors();
 
 
 				//exit
-				if (error) reportError(ERR_PWM_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
+				if (error) notifyError(ERR_PWM_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
 
 				error = 0;		//TODO should this be global and be working in another SM
 				led_step = L_start;
@@ -277,11 +283,11 @@ void ledRings_SM (void * argument) {
 
 			case L_start:
 				if (NUM_OF_LEDRINGS > 0) {
-					startLedDMA(&pwm1);
+					ledDMA_send(&pwm1,ledRing1Data);
 				}
 
 				if (NUM_OF_LEDRINGS > 1) {
-					startLedDMA(&pwm2);
+					ledDMA_send(&pwm2,ledRing2Data);
 				}
 				startTimeOut(2000);	//TODO this should be a timer from OS or HW and here otherwise it would start always the timer
 
@@ -291,7 +297,7 @@ void ledRings_SM (void * argument) {
 
 				break;
 			case	L_updateEffect:	//TODO this may be needed to be done attomically since the NHSM will change it sometimes.
-				if (effectRateUpdt()) {	//Todo This function checks whether the current effect needs to be updated
+				if (led_effectRateUpdt()) {	//Todo This function checks whether the current effect needs to be updated
 					__NOP();
 				}
 				//exit
@@ -302,12 +308,12 @@ void ledRings_SM (void * argument) {
 
 				//exit
 				if(PWM1DMArcvd && PWM2DMArcvd) {
-					startTimerRefresh(PWM_REFRESH_PERIOD);	//Waiting for refresh timer
+					led_startTimerRefresh(PWM_REFRESH_PERIOD);	//Waiting for refresh timer
 					led_step = l_waitRefresh;
 				} 	//TODO DMAReceived should be changed by interruption
 
 				if(timedOut) {
-					reportError(ERR_PWM_TIMEOUT);
+					notifyError(ERR_PWM_TIMEOUT);
 					led_step = L_restart;
 				} 	//TODO A Timer OS or Hardware should change this
 				break;
@@ -321,7 +327,7 @@ void ledRings_SM (void * argument) {
 					led_step = L_start;
 				break;
 			case	L_updateColor:
-				colorUpdt(currentColors);	//This access should be atomic and current colors is global array
+				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
 				notificationFlag = 0;
 
 				//exit
@@ -331,9 +337,9 @@ void ledRings_SM (void * argument) {
 			case	L_restart:		//After timeout or error
 
 				if (NUM_OF_LEDRINGS > 0)
-					deinitLedDMA(&pwm1);
+					ledDMA_deinit(&pwm1);
 				if (NUM_OF_LEDRINGS > 1)
-					deinitLedDMA(&pwm2);
+					ledDMA_deinit(&pwm2);
 				//exit
 				led_step = L_config;
 
@@ -361,11 +367,11 @@ void ecat_SM (void * argument) {
 		switch (ecat_step) {
 			case	ec_config:
 
-				if(!ecatSPIConfig(&spi1)) error++;
+				if(ecat_SPIConfig(&spi1) == FAILED) error++;
 
 				//exit
 				if (error) {
-					reportError(ERR_ECAT_INIT);
+					notifyError(ERR_ECAT_INIT);
 					error = 0;		//TODO should this be global and be working in another SM
 					ecat_step = ec_fault;
 					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
@@ -376,29 +382,30 @@ void ecat_SM (void * argument) {
 				break;
 
 			case ec_checkConnection:
-				readRegCmd(TEST_BYTE);	//This function sends out command to receive TEST BYTE with DMA,
-				startTimeOut(1000);
+				ecat_readRegCmd(TEST_BYTE);	//This function sends out command to receive TEST BYTE with DMA,
+				startTimeOut(1000);	//TODO This time out only makes sense if the DMA stops working but does not guarantee that the LAN9252 is actually responding
+				//TODO this test should be scheduled regularly, maybe with a global variable that compares the ticks
 				//exit
 				ecat_step = ec_waitDMA;
 				break;
 
 			case	ec_waitDMA:
 				//exit
-				if(ecatDMArcvd) {
+				if(ecatDMArcvd) {		//This DMA rcvd can be the full buffer finished transmiting interruption
 					ecatDMArcvd = FALSE;
-					if(verifyTByte()) {
+					if(ecatVerifyResp(TEST_BYTE) != FAILED) {
 						notifyEvent(EV_ECAT_VERIFIED);
 						ecat_step = ec_idle;
 					}	//TODO this should be improved to use a shared buffer with the data comming from SPI or something similar
 					else {
-						reportError(ERR_ECAT_F_COMM);
+						notifyError(ERR_ECAT_F_COMM);
 						ecat_step = ec_fault;
 					}
 					break;
 				} 	//TODO DMAReceived should be changed by interruption
 
 				if(ecTimedOut) {
-					reportError(ERR_ECAT_TIMEOUT);
+					notifyError(ERR_ECAT_TIMEOUT);
 					ecat_step = ec_fault;
 				} 	//TODO A Timer OS or Hardware should change this
 				break;
@@ -427,7 +434,7 @@ void ecat_SM (void * argument) {
 
 void eventH_SM (void * argument) {
 
-	enum enum_events eventType;
+	//enum enum_events eventType;
 
 	while(1) {		//Infinite loop enforced by task execution
 
@@ -450,19 +457,16 @@ void eventH_SM (void * argument) {
 				 eventType = getCriticality(errorHandler);
 				switch (eventType) {
 				case	error_critical:
-					// TODO Is there anything to do different from others?
-					wrOverECAT(errorHandler,TRUE);	//TODO This function should differenciate between critical and non critical data, TRUE is the arg of priority
-					wrOverUART(errorHandler);
-					changeColor(error_critical);	//TODO This function should change the buffer in an atomic way
+					evh_publish(errorHandler);	//High Priority TODO This function should differenciate between critical and non critical data, TRUE is the arg of priority
+					led_changeSysColors(&currentColors, error_critical);
 					break;
 				case	error_non_critical:
-					wrOverECAT(errorHandler,FALSE);	//TODO This function should differenciate between critical and non critical data, TRUE is the arg of priority
-					wrOverUART(errorHandler);
-					changeColor(error_non_critical);	//TODO This function should change the buffer in an atomic way
-					//TODO change color also selects whether a color holds or is updated, depending on previous errors or priorities.
+					evh_publish(errorHandler);
+					led_changeSysColors(&currentColors, error_non_critical);	//TODO This function should change the buffer in an atomic way
+
 				case	warning:
-					wrOverUART(errorHandler);
-					changeColor(warning);	//TODO This function should change the buffer in an atomic way
+					evh_publish(errorHandler);
+					led_changeSysColors(&currentColors, warning);
 				default :
 					__NOP();
 				}
@@ -473,15 +477,11 @@ void eventH_SM (void * argument) {
 
 			case evH_notifyEv:
 
-				// TODO Is there anything to do different from others?
-				//wrOverECAT(errorHandler,TRUE);	//TODO This function should differenciate between critical and non critical data, TRUE is the arg of priority
-				wrOverUART(notificationHandler);
-				changeColor(event_success);	//TODO This function should change the buffer in an atomic way
-				//exit
+				evh_publish(notificationHandler);
+				led_changeSysColors(&currentColors, event_success);
 				notificationFlag = FALSE;	//TODO What would happen if another error apperead while processin this?
 				evH_step = evH_finish;
 				break;
-
 
 			case	evH_finish:
 				eventHandled = TRUE; //TODO this flag should be adequate for usage of other SMs
@@ -499,33 +499,30 @@ void eventH_SM (void * argument) {
 
 
 /*
- * @brief todo IS THIS A SM?? Sate Machine for error/event handler
+ * @brief TODO IS THIS A SM?? Sate Machine for error/event handler
  *
  */
 
 void uartUpdt (void * argument) {
-
 	while (1) {		//Infinite loop enforced by task execution
-		while (!(updateTemperatureBuffer()));
-		while (!(updateECATBuffer()));	//This function should copy the data from the current 1 wire, returns 0 if the buffer is occupied //This is kind of a semaphore that could be implemented by OS
-		updateStatesBuffer();
+		while (!(tsens_updtBuffer2publish(example_temperatureBuffer2Print))); //PENDING this might represent a possible race condition
+		while (!(ecat_updtBuffer2publish(example_ecatBuffer2Print)));	//This function should copy the data from the current 1 wire, returns 0 if the buffer is occupied //This is kind of a semaphore that could be implemented by OS
+		updtStatesBuffer(currentStates2Print);
 		printf("AXIS COMMUNICATION HUB PROTOTYPE\n");
 		for (uint8_t i=0; i < sizeof(example_temperatureBuffer2Print); i++) {
 			printf("sensor %d: %d \n", i+1,example_temperatureBuffer2Print[i]);
 		}
-		printf(ecatBuffer2Print);
-		printf("States: \nLed: %d Sen: %d Ev: %d Ecat: %d \n", i+1,currentStates2Print[0],currentStates2Print[1],currentStates2Print[2],currentStates2Print[3]);
+		printf(example_ecatBuffer2Print);
+		printf("States: \nLed: %d Sen: %d Ev: %d Ecat: %d \n", currentStates2Print[0],currentStates2Print[1],currentStates2Print[2],currentStates2Print[3]);
 		osDelay(1000);
 	}
 
-
 }
 
-void ecatUpdt (void * argument){
+void ecatUpdt (void * argument) {
 	//TODO implement the current tick as defined in the library
 	while (1) {
 		HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);	//TODO This will be an output to watch with the Logic Analizer
 		osDelayUntil(10);	//TODO check whether this will work with 1 ms
 	}
 }
-
