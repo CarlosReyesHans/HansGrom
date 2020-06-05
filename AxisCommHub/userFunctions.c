@@ -185,14 +185,4 @@ int8_t float2string(float floatValue, char* stringArray){	//TODO This function c
 
 }
 
-/* *
- * @brief	This function helps debug the code over uart
- * */
 
-int _write(int file, char *ptr, int len){
-	int i=0;
-	for (i=0; i<len; i++){
-		ITM_SendChar((*ptr++));
-	}
-	return len;
-}

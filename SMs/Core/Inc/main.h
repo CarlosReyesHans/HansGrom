@@ -88,6 +88,10 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define ecat_testPin_Pin GPIO_PIN_0
+#define ecat_testPin_GPIO_Port GPIOD
+#define uart_testPin_Pin GPIO_PIN_1
+#define uart_testPin_GPIO_Port GPIOD
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
