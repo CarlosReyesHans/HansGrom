@@ -39,11 +39,16 @@ Thumbs.db
 # ignore a specific directory stm32cubeide#
 ###############################
 **/.settings
+**/.metadata
 **/Debug
 **/Drivers
 **/Middlewares
+**/RemoteSystemsTempFiles
 *.launch
 *.ld
+*.cproject
+*.mxproject
+*.project
 **/syscalls.c
 **/system.c
 **/*.cproject

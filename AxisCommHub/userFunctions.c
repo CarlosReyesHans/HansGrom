@@ -18,6 +18,11 @@
 
 
 
+/*--------------------------------------------------------Variables for LED SM--------------------------------------------------------------------------*/
+
+
+
+
 /*
  * @brief	This function uses a timer to create a base time delay of 1 us/50ns
  * @param	The time in microseconds
@@ -187,6 +192,7 @@ int8_t float2string(float floatValue, char* stringArray){	//TODO This function c
 
 }
 
+<<<<<<< HEAD
 /*
  * FUNCTIONS FOR THE WS2812 LED
  */
@@ -296,4 +302,6 @@ void sendError(uint8_t errorNr) {
 		}
 }
 
+=======
+>>>>>>> develop
 

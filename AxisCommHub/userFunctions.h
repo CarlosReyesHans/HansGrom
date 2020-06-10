@@ -15,6 +15,10 @@
 
 
 #include "main.h"
+
+
+typedef short SPI_HandleTypeDef;	//ONLYTEST delete as soon as the real DEF is included
+
 //Variables or handlers
 TIM_HandleTypeDef* usTimerHandler;
 TIM_HandleTypeDef* nsTimerHandler;
@@ -30,6 +34,7 @@ void setPinAsInput (void);
 void writeOneWire (uint8_t data);
 uint8_t readOneWire (void);
 
+<<<<<<< HEAD
 // WS2812 Functions
 void resetWSLED (void);
 void writeWSLED (uint32_t data);
@@ -38,6 +43,15 @@ void setOutputWSLED (void);
 /*
  * Auxiliar functions
  */
+=======
+
+
+
+/* *
+ * @brief	Starts a timeout with HW or CMSIS
+ * */
+void startTimeOut(uint16_t ms);
+>>>>>>> develop
 
 int8_t float2string(float floatValue, char* stringArray);
 
