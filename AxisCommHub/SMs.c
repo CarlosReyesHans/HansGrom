@@ -8,6 +8,7 @@
 #include "main.h"
 #include "stdio.h"
 #include "SMs.h"
+#include "WS2812_Lib_MultiChannel.h"
 
 //Creation of tasks concerning the State Machines
 
@@ -126,25 +127,15 @@ volatile uint8_t ecatDMArcvd;	//TODO This is modified by interruptions
 
 
 /******************************************* LED Rings Space *********************************************************************/
-#define MAX_OF_LEDRINGS	4		//The functions are set for only 2, 4 needs modifications
-#define NUM_OF_LEDRINGS	2
-#define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
-#define EFFECTS_ACTIVATED	0
-#define	EFFECT_REFRESH_PERIOD	10	//TODO this sn=hould be linked to the library times the refresh period
-#define	PWM_REFRESH_PERIOD		30	//TODO this should be linked to the library in ms
 
 volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-volatile uint8_t PWM1DMArcvd, PWM2DMArcvd;
+volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
 volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
 volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
 
 
 /******************************************* Temperature Sensors SM Space *********************************************************************/
-//struct temp	//TODO This should be an struct to better handling
-#define	NUM_OF_SENSORS	3
-#define	TRUE	1
-#define	FALSE	0
-#define FAILED	-1
+
 
 #define TEMP_READOUT_PERIOD	100		//in ms
 
@@ -156,6 +147,7 @@ int32_t	temperatureData[NUM_OF_SENSORS];
 #define ERR_SENSOR_TIMEOUT	12
 #define ERR_PWM_INIT		20
 #define ERR_PWM_TIMEOUT		21
+#define ERR_PWM_SEND		22
 #define	ERR_ECAT_INIT		30
 #define ERR_ECAT_F_COMM		31
 #define ERR_ECAT_TIMEOUT	32
@@ -188,7 +180,7 @@ osStatus_t static ecatStatus,uartPrintStatus;
 
 /*************************************** Var task manager ***********************************************************/
 static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT;
-osTimerId_t timeoutLed,timeoutEcat,timeoutTsens;	//IMPRVME	This may be a local variable to save memory
+osTimerId_t timerLed,timeoutEcat,timerTsens;	//IMPRVME	This may be a local variable to save memory
 static uint8_t timedoutLed,timedoutEcat,timedoutTsens;
 
 /****************************************************************************************************
@@ -300,6 +292,14 @@ void tempSens_SM (void * argument) {
 void ledRings_SM (void * argument) {
 	uint8_t chsetupOK[NUM_OF_LEDRINGS];
 	uint8_t error = 0;
+	osStatus_t timerStatus;
+	static WS2812_RGB_t rgbTemp = {255,0,0};
+
+	timerLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
+	if (timerLed == NULL) {
+		__NOP();	//TODO Handle the error. To Debug
+	}
+
 
 	while(1) {		//Infinite loop enforced by task execution
 
@@ -326,26 +326,28 @@ void ledRings_SM (void * argument) {
 				//if (NUM_OF_LEDRINGS > 2)
 				//if (NUM_OF_LEDRINGS > 3)
 
-//				EFFECTS_ACTIVATED ? led_setInitEffects() : led_setInitColors();
-
+//				EFFECTS_ACTIVATED ? led_setInitEffects() : led_setInitColors();	//PENDING Activating of the effects
+				led_setInitColors();
 
 				//exit
 				if (error) notifyError(ERR_PWM_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
+				error = 0;		//PENDING should this be global and be working in another SM?
 
-				error = 0;		//TODO should this be global and be working in another SM
 				led_step = L_start;
 
 				break;
 
 			case L_start:
-//				if (NUM_OF_LEDRINGS > 0) {
-//					ledDMA_send(&pwm1,ledRing1Data);
-//				}
-//
-//				if (NUM_OF_LEDRINGS > 1) {
-//					ledDMA_send(&pwm2,ledRing2Data);
-//				}
-//				startTimeOut(2000);	//TODO this should be a timer from OS or HW and here otherwise it would start always the timer
+
+				for (uint8_t i = 1; i <= NUM_OF_LEDRINGS; i++) {
+					if (ledDMA_send(i) == FAILED)
+						notifyError(ERR_PWM_SEND);		//TODO Debug
+
+				}
+				timerStatus = osTimerStart(timerLed, (uint32_t) 2000U);	//Timeout
+				if (timerStatus != osOK) {
+					__NOP(); // CHCKME Handle the error during the start of timer
+				}
 
 				//exit
 				led_step = EFFECTS_ACTIVATED ? L_updateEffect : L_waitDMA;
@@ -361,45 +363,65 @@ void ledRings_SM (void * argument) {
 				break;
 
 			case	L_waitDMA:
-				__NOP();
-				osThreadYield();
+				//osThreadYield();	//CHCKME this may not be needed
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 				//exit
-//				if(PWM1DMArcvd && PWM2DMArcvd) {
-//					led_startTimerRefresh(PWM_REFRESH_PERIOD);	//Waiting for refresh timer
-//					led_step = l_waitRefresh;
-//				} 	//TODO DMAReceived should be changed by interruption
-//
-//				if(timedOut) {
-//					notifyError(ERR_PWM_TIMEOUT);
-//					led_step = L_restart;
-//				} 	//TODO A Timer OS or Hardware should change this
+
+				if(dmaLed1_rcvd && dmaLed2_rcvd) { //SAFE: It is not possible that this condition is not true unless there is a timeout
+					if (osTimerStop(timerLed) != osOK) {
+						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
+					}
+					dmaLed1_rcvd = 0;
+					dmaLed2_rcvd = 0;	//Will this be a race condition with the DMA?
+
+					led_step = l_waitRefresh;
+					break;
+				}
+
+				if(timedoutLed) {
+					if (osTimerStop(timerLed) != osOK) {
+						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
+					}
+					notifyError(ERR_PWM_TIMEOUT);
+					timedoutLed = FALSE;
+					led_step = L_restart;
+				}
 				break;
 			case	l_waitRefresh:	//TODO there should be a way to use the OS to sleep the TASK till a signal from interrupt come or TIMEOUT of REFRESH
-				__NOP();
+				osThreadYield();	//PENDING	To delete it may be enough with the waiting for event
+				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, (uint32_t)PWM_REFRESH_PERIOD);
+
 				//exit
-//				if (notificationFlag) {
-//					led_step = L_updateColor;
-//				}
-//				if (refreshTime && !notificationFlag)	//This refeshtime flag is not critical, it only refreshes if notification has been dispatched
-//					led_step = L_start;
+				if (notificationFlag) {	//This is a flag changed by Event Handler if something in the overall system has happened
+					notificationFlag = FALSE;
+					led_step = L_updateColor;
+					break;
+				}
+				//Refreshing time is already elapsed
+					led_step = L_start;
 				break;
 			case	L_updateColor:
 //				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
-				notificationFlag = 0;
-
+				WS2812_All_RGB(1,rgbTemp,0);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
 				//exit
 				led_step = l_waitRefresh;
 				break;
 
 			case	L_restart:		//After timeout or error
 
-//				if (NUM_OF_LEDRINGS > 0)
-//					ledDMA_deinit(&pwm1);
-//				if (NUM_OF_LEDRINGS > 1)
-//					ledDMA_deinit(&pwm2);
-//				//exit
-//				led_step = L_config;
+				if (osTimerIsRunning(timerLed))
+					timerStatus = osTimerStop(timerLed);	//IMPORTANT! This if a state is modify manually
+
+				if (timerStatus != osOK) {
+					__NOP(); //TODO Handle the deletion error
+				}
+
+				for (uint8_t i = 1; i<=NUM_OF_LEDRINGS; i++) {
+					ledDMA_deinit(i);	//TODO Define this function
+				}
+
+				//exit
+				led_step = L_config;
 
 				break;
 
@@ -478,6 +500,7 @@ void ecat_SM (void * argument) {
 				break;
 			case	ec_idle:
 				//entry
+				if (osTimerIsRunning(timeoutEcat))
 				timerStatus = osTimerDelete(timeoutEcat);
 				if (timerStatus != osOK) {
 					__NOP();
@@ -495,6 +518,7 @@ void ecat_SM (void * argument) {
 				break;
 			case ec_fault:
 				//entry
+				if (osTimerIsRunning(timeoutEcat))
 				timerStatus = osTimerDelete(timeoutEcat);
 				if (timerStatus != osOK) {
 					__NOP();
@@ -778,6 +802,36 @@ int8_t ecatVerifyResp(uint8_t reg) {
 
 
 /*---------------------------------------------- EXTRA -------------------------------------------------------------------------*/
+
+/* *
+ * @brief	This is the dma callback function for LED 1
+ * */
+
+void dmaCallback_led1 (void * argument) {
+	//do something
+	dmaLed1_rcvd = TRUE;
+	checkAllDmaRdy();	//This cannot have any race condition because it is call only from interruptions
+}
+
+/* *
+ * @brief	This is the dma callback function for LED 2
+ * */
+
+void dmaCallback_led2(void * argument) {
+	//do something
+	dmaLed2_rcvd = TRUE;
+	checkAllDmaRdy();
+
+}
+
+/* *
+ * @brief	Checks for dma global flags and send event if they are all set.
+ * */
+void checkAllDmaRdy(void) {
+	if (dmaLed1_rcvd && dmaLed2_rcvd)	//PENDING To add conditions for 4 leds if needed
+		osEventFlagsSet(evt_sysSignals, LED_EVENT);
+}
+
 /* *
  * @brief	This is the timeout callback function for LED
  * */
@@ -785,6 +839,7 @@ int8_t ecatVerifyResp(uint8_t reg) {
 void timeoutCallback_led(void * argument) {
 	//do something
 	timedoutLed = TRUE;
+	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
 }
 
 /* *
@@ -794,7 +849,7 @@ void timeoutCallback_ecat(void * argument) {
 	//do something
 	timedoutEcat = FALSE;//TRUE;
 	ecatDMArcvd = TRUE;	//CHckme This is only for test purposes
-	osEventFlagsSet(evt_sysSignals, LED_EVENT);
+	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Chckme why is it a led event?
 }
 
 /* *

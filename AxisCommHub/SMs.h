@@ -8,6 +8,16 @@
 #ifndef SMS_H_
 #define SMS_H_
 
+#include "AxisCommHub_definitions.h"
+
+/******************************************* LED Rings Space *********************************************************************/
+#define MAX_OF_LEDRINGS	4		//The functions are set for only 2, 4 needs modifications
+#define NUM_OF_LEDRINGS	2
+#define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
+#define EFFECTS_ACTIVATED	0
+#define	EFFECT_REFRESH_PERIOD	10	//TODO this sn=hould be linked to the library times the refresh period
+#define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms
+
 /*********************************New SM Functions*************************************************/
 
 /*------------------------------------Task Manager-------------------------------------------------*/
@@ -126,28 +136,16 @@ uint8_t ecat_updtBuffer2publish(uint8_t* buffer2write);
 int8_t ecatVerifyResp(uint8_t reg);
 
 /*--------------------------------------------LED Rings functions-------------------------------------------------------------------------*/
-
+//TODO this functions should be moved to the WS2812 Lib
 /**
  * @brief	Configure a PWM at the given channel
  * */
 int8_t ledDMA_configCh (uint32_t *handlerPtr);	//TODO Change to a pwm hanlder
 
-/**
- * @brief	De-initialize a PWM at the given channel
- * */
-void ledDMA_deinit (uint32_t *handlerPtr);	//TODO Change to a pwm handler
 
-/* *
- * @brief	Starts the transmission of data as PWM+DMA
- * @param	TIM Handler
- * @param	uint8_t *buffer: Pointer to the buffer that contains the current data
- * */
-void ledDMA_send(TIM_HandleTypeDef* handlerPtr,uint8_t *buffer);
 
-/* *
- * @brief Modifies the currentColorsArray to the initial values
- * */
-void led_setInitColors(void);
+
+
 
 /* *
  * @brief Modifies the currentColorsArray to the initial values and sets the predefined effect

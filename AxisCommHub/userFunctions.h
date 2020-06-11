@@ -34,7 +34,7 @@ void setPinAsInput (void);
 void writeOneWire (uint8_t data);
 uint8_t readOneWire (void);
 
-<<<<<<< HEAD
+
 // WS2812 Functions
 void resetWSLED (void);
 void writeWSLED (uint32_t data);
@@ -43,7 +43,7 @@ void setOutputWSLED (void);
 /*
  * Auxiliar functions
  */
-=======
+
 
 
 
@@ -51,7 +51,7 @@ void setOutputWSLED (void);
  * @brief	Starts a timeout with HW or CMSIS
  * */
 void startTimeOut(uint16_t ms);
->>>>>>> develop
+
 
 int8_t float2string(float floatValue, char* stringArray);
 

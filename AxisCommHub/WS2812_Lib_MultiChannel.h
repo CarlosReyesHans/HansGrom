@@ -64,16 +64,26 @@ void DMA_Callback(void);	//TODO check whether this is called
 
 //Library Interface
 void WS2812_Refresh(void);
-void WS2812_Clear(void);
+int8_t WS2812_Clear(uint8_t ch);
+int8_t calcBuf(uint8_t ch);
 void WS2812_RGB2HSV(WS2812_HSV_t hsv_col, WS2812_RGB_t *rgb_col);
 void WS2812_One_RGB(uint32_t nr, WS2812_RGB_t rgb_col, uint8_t refresh);
-void WS2812_All_RGB(WS2812_RGB_t rgb_col, uint8_t refresh);
+void WS2812_All_RGB(uint8_t ch,WS2812_RGB_t rgb_col, uint8_t refresh);
 void WS2812_One_HSV(uint32_t nr, WS2812_HSV_t hsv_col, uint8_t refresh);
-void WS2812_All_HSV(WS2812_HSV_t hsv_col, uint8_t refresh);
+int8_t WS2812_All_HSV(uint8_t ch,WS2812_HSV_t hsv_col, uint8_t refresh);
 void WS2812_Shift_Left(uint8_t refresh);
 void WS2812_Shift_Right(uint8_t refresh);
 void WS2812_Rotate_Left(uint8_t refresh);
 void WS2812_Rotate_Right(uint8_t refresh);
-void startDMA(void);
+int8_t startDMA(uint8_t ch);
+
+/*-----------------------------------------The new functions------------------------------------------------*/
+
+
+int8_t ledDMA_send(uint8_t ch);
+
+void ledDMA_deinit (uint8_t ch);	//TODO Change to a pwm handler
+
+void led_setInitColors(void);
 
 
