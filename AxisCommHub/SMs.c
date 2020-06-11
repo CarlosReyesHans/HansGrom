@@ -126,13 +126,13 @@ volatile uint8_t ecatDMArcvd;	//TODO This is modified by interruptions
 //Timeouts are defined in the task manger
 
 
-/******************************************* LED Rings Space *********************************************************************/
+/******************************************* Extern Variables from LED Rings Multichannel *********************************************************************/
 
-volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
-volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
-volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
-
+//volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
+extern volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
+//volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
+//volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
+//
 
 /******************************************* Temperature Sensors SM Space *********************************************************************/
 
@@ -141,25 +141,7 @@ volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER
 
 int32_t	temperatureData[NUM_OF_SENSORS];
 
-//	Declaration of errors	//TODO There should be the variable that will have the listed values, but it will be different than the osEventFlag which is only general
-#define	ERR_SENSOR_INIT		10
-#define ERR_SENSOR_LOST		11
-#define ERR_SENSOR_TIMEOUT	12
-#define ERR_PWM_INIT		20
-#define ERR_PWM_TIMEOUT		21
-#define ERR_PWM_SEND		22
-#define	ERR_ECAT_INIT		30
-#define ERR_ECAT_F_COMM		31
-#define ERR_ECAT_TIMEOUT	32
 
-//	Declaration of events
-#define EV_ECAT_VERIFIED	30
-#define EV_ECAT_READY		31
-
-#define SYS_EVENT			100
-#define LED_EVENT			120
-#define TSENS_EVENT			130
-#define ECAT_EVENT			140
 
 /******************************************* USART Space *********************************************************************/
 
@@ -173,7 +155,8 @@ uint8_t currentStates2Print[10];
 //Declaration of global variables
 
 volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by interruption
-static uint32_t pwm1, pwm2;	//TODO this should be defined by the MX
+extern TIM_HandleTypeDef htim2;	//This should have been defined by the MX
+extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_up_ch3;
 
 /******************************************* Variables to debug ****************************************************************/
 osStatus_t static ecatStatus,uartPrintStatus;
@@ -308,7 +291,7 @@ void ledRings_SM (void * argument) {
 
 					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
 				if (NUM_OF_LEDRINGS > 0) {
-					if(ledDMA_configCh(&pwm1) != FAILED)
+					if(ledDMA_configCh(1,&htim2,&hdma_tim2_ch1) != FAILED)
 						chsetupOK[0] = TRUE;
 					else {
 						chsetupOK[0] = FALSE;
@@ -316,7 +299,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(ledDMA_configCh(&pwm2) != FAILED)
+					if(ledDMA_configCh(2,&htim2,&hdma_tim2_up_ch3) != FAILED)
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -402,7 +385,9 @@ void ledRings_SM (void * argument) {
 				break;
 			case	L_updateColor:
 //				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
-				WS2812_All_RGB(1,rgbTemp,0);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
+				//ws2812_refresh(1)
+				//ws2812_refresh(2)
+				WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
 				//exit
 				led_step = l_waitRefresh;
 				break;
@@ -759,16 +744,6 @@ void tsens_read1Wire(uint8_t *chsetupOK) {
 
 /*------------------------------------------ LED Ring functions ----------------------------------------------------------*/
 
-/**
- * @brief	Configure a PWM at the given channel
- * */
-int8_t ledDMA_configCh (uint32_t *handlerPtr) {
-	if (handlerPtr == NULL) return -1;
-
-	//TODO
-	//Only for test purposes
-	return 1;
-}	//TODO Change to a pwm hanlder
 
 /*----------------------------------------------- ECAT SM -------------------------------------------------------------*/
 
@@ -803,34 +778,7 @@ int8_t ecatVerifyResp(uint8_t reg) {
 
 /*---------------------------------------------- EXTRA -------------------------------------------------------------------------*/
 
-/* *
- * @brief	This is the dma callback function for LED 1
- * */
 
-void dmaCallback_led1 (void * argument) {
-	//do something
-	dmaLed1_rcvd = TRUE;
-	checkAllDmaRdy();	//This cannot have any race condition because it is call only from interruptions
-}
-
-/* *
- * @brief	This is the dma callback function for LED 2
- * */
-
-void dmaCallback_led2(void * argument) {
-	//do something
-	dmaLed2_rcvd = TRUE;
-	checkAllDmaRdy();
-
-}
-
-/* *
- * @brief	Checks for dma global flags and send event if they are all set.
- * */
-void checkAllDmaRdy(void) {
-	if (dmaLed1_rcvd && dmaLed2_rcvd)	//PENDING To add conditions for 4 leds if needed
-		osEventFlagsSet(evt_sysSignals, LED_EVENT);
-}
 
 /* *
  * @brief	This is the timeout callback function for LED

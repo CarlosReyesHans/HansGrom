@@ -170,7 +170,7 @@ void DebugMon_Handler(void)
 void DMA1_Stream1_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
-		dmaCallback_led2();
+		//dmaCallback_led2();
   /* USER CODE END DMA1_Stream1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_tim2_up_ch3);
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
@@ -184,7 +184,7 @@ void DMA1_Stream1_IRQHandler(void)
 void DMA1_Stream5_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
-	dmaCallback_led1();
+	//dmaCallback_led1();
   /* USER CODE END DMA1_Stream5_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_tim2_ch1);
   /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */

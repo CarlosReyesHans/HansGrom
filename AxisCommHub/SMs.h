@@ -136,13 +136,6 @@ uint8_t ecat_updtBuffer2publish(uint8_t* buffer2write);
 int8_t ecatVerifyResp(uint8_t reg);
 
 /*--------------------------------------------LED Rings functions-------------------------------------------------------------------------*/
-//TODO this functions should be moved to the WS2812 Lib
-/**
- * @brief	Configure a PWM at the given channel
- * */
-int8_t ledDMA_configCh (uint32_t *handlerPtr);	//TODO Change to a pwm hanlder
-
-
 
 
 
