@@ -178,6 +178,7 @@ uint8_t led_effectRateUpdt(void);
 /*--------------------------------------------Auxiliar functions-------------------------------------------------------------------------*/
 
 void goTest (void);
+void eventTesterTask (void* argument);
 
 
 /* *

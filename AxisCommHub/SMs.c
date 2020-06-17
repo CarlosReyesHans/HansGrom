@@ -99,6 +99,18 @@ const osThreadAttr_t taskManagerT_Attributes = {
 		.priority = (osPriority_t) osPriorityHigh,
 };
 
+osThreadId_t	eventTesterTHandler;
+uint32_t eventTesterTBuffer[64];
+StaticTask_t eventTesterTControlBlock;
+const osThreadAttr_t eventTesterT_Attributes = {
+		.name = "eventTesterT",
+		.stack_mem = &eventTesterTBuffer[0],
+		.stack_size = sizeof(eventTesterTBuffer),
+		.cb_mem = &eventTesterTControlBlock,
+		.cb_size = sizeof(eventTesterTControlBlock),
+		.priority = osPriorityBelowNormal1,
+};
+
 //	Declaring the states
 enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publish_data,t_sleep,t_error}tS_step;
 enum enum_ledRingStates {L_config,L_start,L_sleep,L_waitDMA,L_updateEffect,l_waitRefresh,L_updateColor,L_restart,L_error }led_step;
@@ -383,7 +395,10 @@ void ledRings_SM (void * argument) {
 
 				//exit
 				if (notificationFlag) {	//This is a flag changed by Event Handler if something in the overall system has happened
-					notificationFlag = FALSE;
+					//notificationFlag = FALSE;
+					if(osTimerStop(refreshLed)!= osOK) {
+						__NOP();	//Only for debugging error
+					}
 					led_step = L_updateColor;
 					break;
 				}
@@ -402,7 +417,15 @@ void ledRings_SM (void * argument) {
 //				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
 				//ws2812_refresh(1)
 				//ws2812_refresh(2)
-				WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
+				if (errorFlag) {
+					rgbTemp = (WS2812_RGB_t){255,0,0};
+					WS2812_All_RGB(1,rgbTemp,1);
+				}
+				else {
+					rgbTemp = (WS2812_RGB_t){0,255,0};
+					WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
+				}
+
 				//exit
 				led_step = L_start;	//Pending, it cannot go back to wait refresh cause by that moment there is no dma, no timeout
 				break;
@@ -583,7 +606,7 @@ void eventH_SM (void * argument) {
 //					__NOP();
 //				}
 				//exit
-				errorFlag = FALSE;	//TODO What would happen if another error apperead while processin this?
+				//errorFlag = FALSE;	//TODO What would happen if another error apperead while processin this?
 				evH_step = evH_finish;
 				break;
 
@@ -676,7 +699,8 @@ void addThreads(void) {
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
-
+	//Debug tasks
+	eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
 }
 
 
@@ -800,6 +824,24 @@ int8_t ecatVerifyResp(uint8_t reg) {
 
 
 /*---------------------------------------------- EXTRA -------------------------------------------------------------------------*/
+
+void eventTesterTask (void* argument) {
+	static uint8_t counter = 0;
+	osDelay(2000);
+	while(1) {	//Infinite while required by RTOS
+		if (counter % 2 != 0) {//Each pair
+			errorFlag = TRUE;
+			osEventFlagsSet(evt_sysSignals, LED_EVENT);
+		}
+		else {
+			errorFlag = FALSE;
+			osEventFlagsSet(evt_sysSignals, LED_EVENT);
+		}
+		notificationFlag = TRUE;
+		osDelay(3000);
+		counter++;
+	}
+}
 
 void goTest (void) {
 	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
