@@ -66,7 +66,7 @@ void Error_Handler(void);
 #define MCO_GPIO_Port GPIOH
 #define LED_RING1_Pin GPIO_PIN_0
 #define LED_RING1_GPIO_Port GPIOA
-#define LED_RING2_Pin GPIO_PIN_2
+#define LED_RING2_Pin GPIO_PIN_3
 #define LED_RING2_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB

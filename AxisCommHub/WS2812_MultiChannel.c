@@ -27,8 +27,8 @@ static TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;
 static DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
 
 volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
-volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
+volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd, refreshTimeoutLed;
+//volatile uint8_t refreshTime;	//TODO Delete if it is not used
 volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
 
 /*-------------------------------------------------Extern variables from other SMs-------------------------------------------------------------*/
@@ -149,7 +149,7 @@ int8_t ledDMA_send(uint8_t ch) {
 			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH1, TIM_CHANNEL_1, (uint32_t *)WS2812_TIM_BUF1, WS2812_BUFLEN1);	//PENDING	Extend for more than 4 channels
 			break;
 		case 2:
-			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, TIM_CHANNEL_3, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
+			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, TIM_CHANNEL_4, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
 		  break;
 		case 3:
 		  __NOP(); //
@@ -490,21 +490,19 @@ int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr,DMA_HandleTypeD
  * @brief	This is the dma callback function for LED 1
  * */
 
-void dmaCallback_led1 (DMA_HandleTypeDef *dmaHandlerptr) {
+void dmaCallback_led1 (void) {
 	//do something
 	dmaLed1_rcvd = TRUE;
-	checkAllDmaRdy();	//This cannot have any race condition because it is call only from interruptions
+	//checkAllDmaRdy();	//This cannot have any race condition because it is call only from interruptions
 }
 
 /* *
  * @brief	This is the dma callback function for LED 2
  * */
 
-void dmaCallback_led2(void * argument) {
+void dmaCallback_led2(void) {
 	//do something
 	dmaLed2_rcvd = TRUE;
-	checkAllDmaRdy();
-
 }
 
 /* *
@@ -516,6 +514,12 @@ void checkAllDmaRdy(void) {
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
-	DMA_HandleTypeDef temp;	//TODO Delete, only for debugging purposes
-	dmaCallback_led1 (&temp);
+	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+		dmaCallback_led1();
+	}
+	else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3) {
+		dmaCallback_led2();
+	}
+	checkAllDmaRdy();
+
 }

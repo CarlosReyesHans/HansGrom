@@ -85,8 +85,8 @@ int8_t ledDMA_send(uint8_t ch);
 void ledDMA_deinit (uint8_t ch);	//TODO Change to a pwm handler
 
 void led_setInitColors(void);
-void dmaCallback_led1 (DMA_HandleTypeDef *dmaHandlerptr);
-void dmaCallback_led2(void * argument);
+void dmaCallback_led1 (void);
+void dmaCallback_led2(void);
 void checkAllDmaRdy(void);
 
 int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr,DMA_HandleTypeDef *dmaHandlerptr);

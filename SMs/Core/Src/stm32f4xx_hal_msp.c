@@ -26,7 +26,7 @@
 /* USER CODE END Includes */
 extern DMA_HandleTypeDef hdma_tim2_ch1;
 
-extern DMA_HandleTypeDef hdma_tim2_up_ch3;
+extern DMA_HandleTypeDef hdma_tim2_ch2_ch4;
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -85,14 +85,14 @@ void HAL_MspInit(void)
 }
 
 /**
-* @brief TIM_PWM MSP Initialization
+* @brief TIM_Base MSP Initialization
 * This function configures the hardware resources used in this example
-* @param htim_pwm: TIM_PWM handle pointer
+* @param htim_base: TIM_Base handle pointer
 * @retval None
 */
-void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
-  if(htim_pwm->Instance==TIM2)
+  if(htim_base->Instance==TIM2)
   {
   /* USER CODE BEGIN TIM2_MspInit 0 */
 
@@ -110,35 +110,35 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     hdma_tim2_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     hdma_tim2_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     hdma_tim2_ch1.Init.Mode = DMA_NORMAL;
-    hdma_tim2_ch1.Init.Priority = DMA_PRIORITY_MEDIUM;
+    hdma_tim2_ch1.Init.Priority = DMA_PRIORITY_HIGH;
     hdma_tim2_ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_tim2_ch1) != HAL_OK)
     {
       Error_Handler();
     }
 
-    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC1],hdma_tim2_ch1);
+    __HAL_LINKDMA(htim_base,hdma[TIM_DMA_ID_CC1],hdma_tim2_ch1);
 
-    /* TIM2_UP_CH3 Init */
-    hdma_tim2_up_ch3.Instance = DMA1_Stream1;
-    hdma_tim2_up_ch3.Init.Channel = DMA_CHANNEL_3;
-    hdma_tim2_up_ch3.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    hdma_tim2_up_ch3.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_tim2_up_ch3.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_tim2_up_ch3.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_tim2_up_ch3.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_tim2_up_ch3.Init.Mode = DMA_NORMAL;
-    hdma_tim2_up_ch3.Init.Priority = DMA_PRIORITY_MEDIUM;
-    hdma_tim2_up_ch3.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    if (HAL_DMA_Init(&hdma_tim2_up_ch3) != HAL_OK)
+    /* TIM2_CH2_CH4 Init */
+    hdma_tim2_ch2_ch4.Instance = DMA1_Stream6;
+    hdma_tim2_ch2_ch4.Init.Channel = DMA_CHANNEL_3;
+    hdma_tim2_ch2_ch4.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim2_ch2_ch4.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim2_ch2_ch4.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim2_ch2_ch4.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_tim2_ch2_ch4.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_tim2_ch2_ch4.Init.Mode = DMA_NORMAL;
+    hdma_tim2_ch2_ch4.Init.Priority = DMA_PRIORITY_MEDIUM;
+    hdma_tim2_ch2_ch4.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim2_ch2_ch4) != HAL_OK)
     {
       Error_Handler();
     }
 
     /* Several peripheral DMA handle pointers point to the same DMA handle.
      Be aware that there is only one stream to perform all the requested DMAs. */
-    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_UPDATE],hdma_tim2_up_ch3);
-    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC3],hdma_tim2_up_ch3);
+    __HAL_LINKDMA(htim_base,hdma[TIM_DMA_ID_CC2],hdma_tim2_ch2_ch4);
+    __HAL_LINKDMA(htim_base,hdma[TIM_DMA_ID_CC4],hdma_tim2_ch2_ch4);
 
     /* TIM2 interrupt Init */
     HAL_NVIC_SetPriority(TIM2_IRQn, 5, 0);
@@ -162,7 +162,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration    
     PA0-WKUP     ------> TIM2_CH1
-    PA2     ------> TIM2_CH3 
+    PA3     ------> TIM2_CH4 
     */
     GPIO_InitStruct.Pin = LED_RING1_Pin|LED_RING2_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -178,14 +178,14 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 
 }
 /**
-* @brief TIM_PWM MSP De-Initialization
+* @brief TIM_Base MSP De-Initialization
 * This function freeze the hardware resources used in this example
-* @param htim_pwm: TIM_PWM handle pointer
+* @param htim_base: TIM_Base handle pointer
 * @retval None
 */
-void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef* htim_pwm)
+void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
 {
-  if(htim_pwm->Instance==TIM2)
+  if(htim_base->Instance==TIM2)
   {
   /* USER CODE BEGIN TIM2_MspDeInit 0 */
 
@@ -194,9 +194,9 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef* htim_pwm)
     __HAL_RCC_TIM2_CLK_DISABLE();
 
     /* TIM2 DMA DeInit */
-    HAL_DMA_DeInit(htim_pwm->hdma[TIM_DMA_ID_CC1]);
-    HAL_DMA_DeInit(htim_pwm->hdma[TIM_DMA_ID_UPDATE]);
-    HAL_DMA_DeInit(htim_pwm->hdma[TIM_DMA_ID_CC3]);
+    HAL_DMA_DeInit(htim_base->hdma[TIM_DMA_ID_CC1]);
+    HAL_DMA_DeInit(htim_base->hdma[TIM_DMA_ID_CC2]);
+    HAL_DMA_DeInit(htim_base->hdma[TIM_DMA_ID_CC4]);
 
     /* TIM2 interrupt DeInit */
     HAL_NVIC_DisableIRQ(TIM2_IRQn);

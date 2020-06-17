@@ -15,8 +15,8 @@
 #define NUM_OF_LEDRINGS	2
 #define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
 #define EFFECTS_ACTIVATED	0
-#define	EFFECT_REFRESH_PERIOD	10	//TODO this sn=hould be linked to the library times the refresh period
-#define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms
+#define	EFFECT_REFRESH_PERIOD	10U	//TODO this sn=hould be linked to the library times the refresh period
+#define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms @ 60HZ
 
 /*********************************New SM Functions*************************************************/
 
@@ -177,6 +177,9 @@ uint8_t led_effectRateUpdt(void);
 
 /*--------------------------------------------Auxiliar functions-------------------------------------------------------------------------*/
 
+void goTest (void);
+
+
 /* *
  * @brief	Transforms already formated temperature data evalCHDAta into the format such that it can be transfered via EtherCAT //TODO
  * 			//PENDING it may enter into race condition!!
@@ -193,6 +196,8 @@ void addThreads(void);
 
 
 void timeoutCallback_led(void * argument);
+
+void refreshCallback_led(void * argument);
 
 void timeoutCallback_ecat(void * argument);
 

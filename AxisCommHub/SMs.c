@@ -129,7 +129,7 @@ volatile uint8_t ecatDMArcvd;	//TODO This is modified by interruptions
 /******************************************* Extern Variables from LED Rings Multichannel *********************************************************************/
 
 //volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-extern volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
+extern volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd,refreshTimeoutLed;
 //volatile uint8_t refreshTime;	//TODO This is a flag that could be replaced by a Timer or signals created by the OS
 //volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
 //
@@ -156,14 +156,14 @@ uint8_t currentStates2Print[10];
 
 volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by interruption
 extern TIM_HandleTypeDef htim2;	//This should have been defined by the MX
-extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_up_ch3;
+extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_ch2_ch4;//pending the channel needs to be updated after the tests hdma_tim2_up_ch3
 
 /******************************************* Variables to debug ****************************************************************/
 osStatus_t static ecatStatus,uartPrintStatus;
 
 /*************************************** Var task manager ***********************************************************/
-static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT;
-osTimerId_t timerLed,timeoutEcat,timerTsens;	//IMPRVME	This may be a local variable to save memory
+static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT, status_taskMT;
+osTimerId_t refreshLed,timeoutLed,timeoutEcat,timerTsens;	//IMPRVME	This may be a local variable to save memory
 static uint8_t timedoutLed,timedoutEcat,timedoutTsens;
 
 /****************************************************************************************************
@@ -265,6 +265,7 @@ void tempSens_SM (void * argument) {
 
 		}
 	}
+	osThreadTerminate(tempSensTHandle); //If at any moment the cp reaches out of the while loop
 }
 
 /*
@@ -278,8 +279,9 @@ void ledRings_SM (void * argument) {
 	osStatus_t timerStatus;
 	static WS2812_RGB_t rgbTemp = {255,0,0};
 
-	timerLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
-	if (timerLed == NULL) {
+	timeoutLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
+	refreshLed = osTimerNew(refreshCallback_led, osTimerOnce, NULL, NULL);
+	if (timeoutLed == NULL) {
 		__NOP();	//TODO Handle the error. To Debug
 	}
 
@@ -299,7 +301,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(ledDMA_configCh(2,&htim2,&hdma_tim2_up_ch3) != FAILED)
+					if(ledDMA_configCh(2,&htim2,&hdma_tim2_ch2_ch4) != FAILED)	//pending this needs to be changed back to the ch3
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -327,7 +329,7 @@ void ledRings_SM (void * argument) {
 						notifyError(ERR_PWM_SEND);		//TODO Debug
 
 				}
-				timerStatus = osTimerStart(timerLed, (uint32_t) 2000U);	//Timeout
+				timerStatus = osTimerStart(timeoutLed, (uint32_t) 10000U);	//Timeout
 				if (timerStatus != osOK) {
 					__NOP(); // CHCKME Handle the error during the start of timer
 				}
@@ -351,9 +353,14 @@ void ledRings_SM (void * argument) {
 				//exit
 
 				if(dmaLed1_rcvd && dmaLed2_rcvd) { //SAFE: It is not possible that this condition is not true unless there is a timeout
-					if (osTimerStop(timerLed) != osOK) {
+					if (osTimerStop(timeoutLed) != osOK) {
 						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
 					}
+
+					if(osTimerStart(refreshLed, (uint32_t)PWM_REFRESH_PERIOD)!= osOK) {
+						__NOP(); //Handle the starting error. // Chckme This could be separated into two different timers
+					}
+
 					dmaLed1_rcvd = 0;
 					dmaLed2_rcvd = 0;	//Will this be a race condition with the DMA?
 
@@ -361,18 +368,18 @@ void ledRings_SM (void * argument) {
 					break;
 				}
 
-				if(timedoutLed) {
-					if (osTimerStop(timerLed) != osOK) {
+				if (timedoutLed) {	//Todo THIS SHOULD BE DELETED AFTER COMPARING THE TIMEOUT FEATURE FROM OSEVENTFLAGS WAIT VS osTIMER
+					if (osTimerStop(timeoutLed) != osOK) {
 						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
 					}
-					notifyError(ERR_PWM_TIMEOUT);
+					//notifyError(ERR_PWM_TIMEOUT);
 					timedoutLed = FALSE;
 					led_step = L_restart;
 				}
 				break;
 			case	l_waitRefresh:	//TODO there should be a way to use the OS to sleep the TASK till a signal from interrupt come or TIMEOUT of REFRESH
 				osThreadYield();	//PENDING	To delete it may be enough with the waiting for event
-				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, (uint32_t)PWM_REFRESH_PERIOD);
+				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 
 				//exit
 				if (notificationFlag) {	//This is a flag changed by Event Handler if something in the overall system has happened
@@ -380,8 +387,16 @@ void ledRings_SM (void * argument) {
 					led_step = L_updateColor;
 					break;
 				}
+
 				//Refreshing time is already elapsed
+				if (refreshTimeoutLed) {
+					if(osTimerStop(refreshLed)!= osOK) {
+						__NOP();	//Only for debugging error
+					}
+					refreshTimeoutLed = FALSE;
 					led_step = L_start;
+				}
+
 				break;
 			case	L_updateColor:
 //				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
@@ -394,8 +409,8 @@ void ledRings_SM (void * argument) {
 
 			case	L_restart:		//After timeout or error
 
-				if (osTimerIsRunning(timerLed))
-					timerStatus = osTimerStop(timerLed);	//IMPORTANT! This if a state is modify manually
+				if (osTimerIsRunning(timeoutLed))
+					timerStatus = osTimerStop(timeoutLed);	//IMPORTANT! This if a state is modify manually
 
 				if (timerStatus != osOK) {
 					__NOP(); //TODO Handle the deletion error
@@ -414,6 +429,8 @@ void ledRings_SM (void * argument) {
 				__NOP();
 			}
 	}
+
+	osThreadTerminate(ledRingsTHandle);	//If at any moment the cp reaches out of the while loop
 
 
 }
@@ -486,7 +503,7 @@ void ecat_SM (void * argument) {
 			case	ec_idle:
 				//entry
 				if (osTimerIsRunning(timeoutEcat))
-				timerStatus = osTimerDelete(timeoutEcat);
+				timerStatus = osTimerStop(timeoutEcat);
 				if (timerStatus != osOK) {
 					__NOP();
 					//Handle this OS timer error
@@ -504,7 +521,7 @@ void ecat_SM (void * argument) {
 			case ec_fault:
 				//entry
 				if (osTimerIsRunning(timeoutEcat))
-				timerStatus = osTimerDelete(timeoutEcat);
+				timerStatus = osTimerStop(timeoutEcat);
 				if (timerStatus != osOK) {
 					__NOP();
 					//Handle this OS timer error
@@ -517,6 +534,7 @@ void ecat_SM (void * argument) {
 			}
 	}
 
+	osThreadTerminate(ecatSMTHandle);
 
 }
 
@@ -588,6 +606,8 @@ void eventH_SM (void * argument) {
 			}
 	}
 
+	osThreadTerminate(eventHTHandle);
+
 
 }
 
@@ -613,6 +633,7 @@ void uartUpdt (void * argument) {
 		printf("States: \nLed: %d Sen: %d Ev: %d Ecat: %d \n", currentStates2Print[0],currentStates2Print[1],currentStates2Print[2],currentStates2Print[3]);
 		osDelay(1000);
 	}
+	osThreadTerminate(uartPrintTHandler);
 
 }
 
@@ -675,9 +696,11 @@ void taskManger(void * argument) {
 		status_uartPT = osThreadGetState(uartPrintTHandler);
 		status_tSensT = osThreadGetState(tempSensTHandle);
 		status_ledsT = osThreadGetState(ledRingsTHandle);
+		status_taskMT = osThreadGetState(taskManagerTHandler);
 		osThreadYield();	//Yield to any other thread that may be ready
 		osDelay(1);			//1ms update rate
 	}
+
 	osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
 
 }
@@ -778,7 +801,21 @@ int8_t ecatVerifyResp(uint8_t reg) {
 
 /*---------------------------------------------- EXTRA -------------------------------------------------------------------------*/
 
+void goTest (void) {
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	uint16_t temporal_buffer[10] = {50,50,50,50,10,10,0,0,90,25};
+	HAL_StatusTypeDef temporal_status;
 
+	temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, (uint32_t*) temporal_buffer, 10);
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+	//htim2.Instance->CCR1 = 50;
+	//htim2.Instance->CCR4 = 25;
+	while (1) {
+		temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1,(uint32_t*) temporal_buffer, 10);
+		HAL_Delay(1000);
+	}
+
+}
 
 /* *
  * @brief	This is the timeout callback function for LED
@@ -789,6 +826,19 @@ void timeoutCallback_led(void * argument) {
 	timedoutLed = TRUE;
 	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
 }
+
+/* *
+ * @brief	This is the timeout callback function for LED
+ * */
+
+void refreshCallback_led(void * argument) {
+	//do something
+	refreshTimeoutLed = TRUE;
+	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
+}
+
+
+
 
 /* *
  * @brief	This is the timeout callback function for Temperature Sensor
