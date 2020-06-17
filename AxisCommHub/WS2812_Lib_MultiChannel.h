@@ -89,7 +89,7 @@ void dmaCallback_led1 (void);
 void dmaCallback_led2(void);
 void checkAllDmaRdy(void);
 
-int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr,DMA_HandleTypeDef *dmaHandlerptr);
+int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr);
 
 
 

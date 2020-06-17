@@ -33,6 +33,7 @@ volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER
 
 /*-------------------------------------------------Extern variables from other SMs-------------------------------------------------------------*/
 extern osEventFlagsId_t evt_sysSignals;
+extern TIM_HandleTypeDef htim3;
 
 
 /*----------------------------------------------------Functions------------------------------------------------------------------------*/
@@ -149,7 +150,7 @@ int8_t ledDMA_send(uint8_t ch) {
 			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH1, TIM_CHANNEL_1, (uint32_t *)WS2812_TIM_BUF1, WS2812_BUFLEN1);	//PENDING	Extend for more than 4 channels
 			break;
 		case 2:
-			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, TIM_CHANNEL_4, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
+			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, TIM_CHANNEL_1, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
 		  break;
 		case 3:
 		  __NOP(); //
@@ -466,7 +467,7 @@ void led_setInitColors(void) {
 /**
  * @brief	Configure a PWM at the given channel
  * */
-int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr,DMA_HandleTypeDef *dmaHandlerptr) {
+int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr) {
 	if (handlerPtr == NULL) return -1;
 
 	switch (ch) {
@@ -514,12 +515,19 @@ void checkAllDmaRdy(void) {
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+	HAL_StatusTypeDef temporal_status;
+
+	if (htim == ledCH1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 		dmaCallback_led1();
 	}
-	else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3) {
+	else if (htim == ledCH2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 		dmaCallback_led2();
 	}
 	checkAllDmaRdy();
 
+	if (htim->Instance == &htim3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+		__NOP();
+	}
+
 }
+

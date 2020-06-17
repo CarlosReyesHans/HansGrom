@@ -155,7 +155,7 @@ uint8_t currentStates2Print[10];
 //Declaration of global variables
 
 volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by interruption
-extern TIM_HandleTypeDef htim2;	//This should have been defined by the MX
+extern TIM_HandleTypeDef htim2,htim3,htim4;	//This should have been defined by the MX
 extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_ch2_ch4;//pending the channel needs to be updated after the tests hdma_tim2_up_ch3
 
 /******************************************* Variables to debug ****************************************************************/
@@ -265,7 +265,7 @@ void tempSens_SM (void * argument) {
 
 		}
 	}
-	osThreadTerminate(tempSensTHandle); //If at any moment the cp reaches out of the while loop
+	//osThreadTerminate(tempSensTHandle); //If at any moment the cp reaches out of the while loop
 }
 
 /*
@@ -293,7 +293,7 @@ void ledRings_SM (void * argument) {
 
 					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
 				if (NUM_OF_LEDRINGS > 0) {
-					if(ledDMA_configCh(1,&htim2,&hdma_tim2_ch1) != FAILED)
+					if(ledDMA_configCh(1,&htim3) != FAILED)
 						chsetupOK[0] = TRUE;
 					else {
 						chsetupOK[0] = FALSE;
@@ -301,7 +301,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(ledDMA_configCh(2,&htim2,&hdma_tim2_ch2_ch4) != FAILED)	//pending this needs to be changed back to the ch3
+					if(ledDMA_configCh(2,&htim4) != FAILED)	//pending hdma_tim2_ch2_ch4this needs to be changed back to the ch3
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -329,7 +329,7 @@ void ledRings_SM (void * argument) {
 						notifyError(ERR_PWM_SEND);		//TODO Debug
 
 				}
-				timerStatus = osTimerStart(timeoutLed, (uint32_t) 10000U);	//Timeout
+				timerStatus = osTimerStart(timeoutLed, (uint32_t) 1000U);	//Timeout
 				if (timerStatus != osOK) {
 					__NOP(); // CHCKME Handle the error during the start of timer
 				}
@@ -404,7 +404,7 @@ void ledRings_SM (void * argument) {
 				//ws2812_refresh(2)
 				WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
 				//exit
-				led_step = l_waitRefresh;
+				led_step = L_start;	//Pending, it cannot go back to wait refresh cause by that moment there is no dma, no timeout
 				break;
 
 			case	L_restart:		//After timeout or error
@@ -430,7 +430,7 @@ void ledRings_SM (void * argument) {
 			}
 	}
 
-	osThreadTerminate(ledRingsTHandle);	//If at any moment the cp reaches out of the while loop
+	//osThreadTerminate(ledRingsTHandle);	//If at any moment the cp reaches out of the while loop
 
 
 }
@@ -534,7 +534,7 @@ void ecat_SM (void * argument) {
 			}
 	}
 
-	osThreadTerminate(ecatSMTHandle);
+	//osThreadTerminate(ecatSMTHandle);
 
 }
 
@@ -606,7 +606,7 @@ void eventH_SM (void * argument) {
 			}
 	}
 
-	osThreadTerminate(eventHTHandle);
+	//osThreadTerminate(eventHTHandle);
 
 
 }
@@ -620,7 +620,7 @@ void eventH_SM (void * argument) {
 
 void uartUpdt (void * argument) {
 	while (1) {		//Infinite loop enforced by task execution
-		HAL_GPIO_TogglePin(uart_testPin_GPIO_Port, uart_testPin_Pin);	//Output to logic Analizer
+		//HAL_GPIO_TogglePin(uart_testPin_GPIO_Port, uart_testPin_Pin);	//Output to logic Analizer
 
 //		while (!(tsens_updtBuffer2publish(example_temperatureBuffer2Print))); //PENDING this might represent a possible race condition
 //		while (!(ecat_updtBuffer2publish(example_ecatBuffer2Print)));	//This function should copy the data from the current 1 wire, returns 0 if the buffer is occupied //This is kind of a semaphore that could be implemented by OS
@@ -633,7 +633,7 @@ void uartUpdt (void * argument) {
 		printf("States: \nLed: %d Sen: %d Ev: %d Ecat: %d \n", currentStates2Print[0],currentStates2Print[1],currentStates2Print[2],currentStates2Print[3]);
 		osDelay(1000);
 	}
-	osThreadTerminate(uartPrintTHandler);
+	//osThreadTerminate(uartPrintTHandler);
 
 }
 
@@ -647,7 +647,7 @@ void ecatUpdt (void * argument) {
 	ecat_tick = osKernelGetTickCount();
 	while (1) {
 		HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);	//TODO This will be an output to watch with the Logic Analizer
-		HAL_GPIO_TogglePin(ecat_testPin_GPIO_Port, ecat_testPin_Pin);
+		//HAL_GPIO_TogglePin(ecat_testPin_GPIO_Port, ecat_testPin_Pin);
 
 		ecat_tick += 1;
 		osDelayUntil(ecat_tick);	//chckme check whether this will work with 1 ms
@@ -701,7 +701,7 @@ void taskManger(void * argument) {
 		osDelay(1);			//1ms update rate
 	}
 
-	osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
+	//osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
 
 }
 
@@ -803,19 +803,31 @@ int8_t ecatVerifyResp(uint8_t reg) {
 
 void goTest (void) {
 	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	uint16_t temporal_buffer[10] = {50,50,50,50,10,10,0,0,90,25};
+	static uint16_t temporal_buffer1[20] = {50,50,50,50,50,25,25,25,25,25,50,50,50,50,50,25,25,25,25,0};
+	static uint16_t temporal_buffer2[20] = {10,10,10,10,10,10,10,10,10,10,90,90,90,90,90,90,90,90,90,0};
+	static uint16_t temporal_buffer3[20] = {50,50,50,50,50,50,50,50,10,10,10,10,10,10,10,10,10,10,10,0};
+	static uint16_t temporal_buffer4[20] = {10,10,10,10,10,10,10,10,10,10,10,10,50,50,50,50,50,50,50,0,};
 	HAL_StatusTypeDef temporal_status;
-
-	temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, (uint32_t*) temporal_buffer, 10);
+	//HAL_TIM_PWM_DeInit(&htim2);
+	//HAL_TIM_PWM_DeInit(&htim3);
+	//HAL_TIM_PWM_Init(&htim2);
+	//HAL_TIM_PWM_Init(&htim3);
+	temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, (uint32_t*)temporal_buffer1, 20);
+	//temporal_status = HAL_TIM_PWM_Start_DMA(&htim3, TIM_CHANNEL_1, (uint32_t*)temporal_buffer2, 20);
+	temporal_status = HAL_TIM_PWM_Start_DMA(&htim4, TIM_CHANNEL_1, (uint32_t*)temporal_buffer3, 20);
+	temporal_status = HAL_TIM_PWM_Start_DMA(&htim3, TIM_CHANNEL_3, (uint32_t*)temporal_buffer4, 20);
+	//temporal_status = HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
 	//htim2.Instance->CCR1 = 50;
 	//htim2.Instance->CCR4 = 25;
 	while (1) {
-		temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1,(uint32_t*) temporal_buffer, 10);
+		//temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1,(uint32_t*) temporal_buffer, 10);
 		HAL_Delay(1000);
 	}
 
 }
+
+
 
 /* *
  * @brief	This is the timeout callback function for LED
