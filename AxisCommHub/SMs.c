@@ -167,7 +167,7 @@ uint8_t currentStates2Print[10];
 //Declaration of global variables
 
 volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by interruption
-extern TIM_HandleTypeDef htim2,htim3,htim4;	//This should have been defined by the MX
+extern TIM_HandleTypeDef htim2,htim3,htim4,htim8;	//This should have been defined by the MX
 extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_ch2_ch4;//pending the channel needs to be updated after the tests hdma_tim2_up_ch3
 
 /******************************************* Variables to debug ****************************************************************/
@@ -305,7 +305,7 @@ void ledRings_SM (void * argument) {
 
 					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
 				if (NUM_OF_LEDRINGS > 0) {
-					if(ledDMA_configCh(1,&htim3) != FAILED)
+					if(ledDMA_configCh(1,&htim8) != FAILED)
 						chsetupOK[0] = TRUE;
 					else {
 						chsetupOK[0] = FALSE;
@@ -313,7 +313,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(ledDMA_configCh(2,&htim4) != FAILED)	//pending hdma_tim2_ch2_ch4this needs to be changed back to the ch3
+					if(ledDMA_configCh(2,&htim3) != FAILED)	//pending hdma_tim2_ch2_ch4this needs to be changed back to the ch3
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -420,10 +420,14 @@ void ledRings_SM (void * argument) {
 				if (errorFlag) {
 					rgbTemp = (WS2812_RGB_t){255,0,0};
 					WS2812_All_RGB(1,rgbTemp,1);
+					rgbTemp = (WS2812_RGB_t){0,0,255};
+					WS2812_All_RGB(2,rgbTemp,1);
 				}
 				else {
 					rgbTemp = (WS2812_RGB_t){0,255,0};
 					WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
+					rgbTemp = (WS2812_RGB_t){255,0,255};
+					WS2812_All_RGB(2,rgbTemp,1);
 				}
 
 				//exit

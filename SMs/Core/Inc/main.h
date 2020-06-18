@@ -60,14 +60,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define COUNT_PERIOD_AT_40MHZ 5-1
+#define COUNT_PERIOD_AT_80MHZ 100-1
+#define COUNT_PERIOD_AT_160MHZ 200-1
+#define PRESCALER_2 2-1
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
-#define LEDRING1_Pin GPIO_PIN_0
-#define LEDRING1_GPIO_Port GPIOA
-#define LED_RING_2_Pin GPIO_PIN_6
-#define LED_RING_2_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
 #define LD3_Pin GPIO_PIN_14
@@ -76,14 +76,12 @@ void Error_Handler(void);
 #define STLK_RX_GPIO_Port GPIOD
 #define STLK_TX_Pin GPIO_PIN_9
 #define STLK_TX_GPIO_Port GPIOD
-#define LED3_Pin GPIO_PIN_12
-#define LED3_GPIO_Port GPIOD
 #define USB_PowerSwitchOn_Pin GPIO_PIN_6
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7
 #define USB_OverCurrent_GPIO_Port GPIOG
-#define led4_Pin GPIO_PIN_8
-#define led4_GPIO_Port GPIOC
+#define LED_RING1_Pin GPIO_PIN_6
+#define LED_RING1_GPIO_Port GPIOC
 #define USB_SOF_Pin GPIO_PIN_8
 #define USB_SOF_GPIO_Port GPIOA
 #define USB_VBUS_Pin GPIO_PIN_9
@@ -102,6 +100,8 @@ void Error_Handler(void);
 #define ecat_testPin_GPIO_Port GPIOD
 #define uart_testPin_Pin GPIO_PIN_1
 #define uart_testPin_GPIO_Port GPIOD
+#define LED_RING2_Pin GPIO_PIN_5
+#define LED_RING2_GPIO_Port GPIOB
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

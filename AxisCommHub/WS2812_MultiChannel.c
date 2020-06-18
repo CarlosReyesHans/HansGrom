@@ -140,17 +140,17 @@ int8_t calcBuf(uint8_t ch) {
  * */
 
 int8_t ledDMA_send(uint8_t ch) {
-	//uint8_t test[8] = {10};
-	//dma_ready = 0; chckme this may not be needed any longer
+
+
 	HAL_StatusTypeDef tempStatus;
 		if (ch > MAX_OF_LEDRINGS) return -1;
 
-		switch (ch) {
+		switch (ch) {	//NOTE: Don't change the channel for each LED output here but within the AxisCommHub_definitions
 		case 1:
-			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH1, TIM_CHANNEL_1, (uint32_t *)WS2812_TIM_BUF1, WS2812_BUFLEN1);	//PENDING	Extend for more than 4 channels
+			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH1, CHANNEL_FOR_LED1, (uint32_t *)WS2812_TIM_BUF1, WS2812_BUFLEN1);	//PENDING	Extend for more than 4 channels
 			break;
 		case 2:
-			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, TIM_CHANNEL_1, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
+			tempStatus = HAL_TIM_PWM_Start_DMA(ledCH2, CHANNEL_FOR_LED2, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
 		  break;
 		case 3:
 		  __NOP(); //
@@ -164,10 +164,6 @@ int8_t ledDMA_send(uint8_t ch) {
 
 		if (tempStatus == HAL_OK) return 1;
 		else return -1;
-
-//	HAL_TIM_PWM_Start_DMA(ledCH3, TIM_CHANNEL_3, (uint32_t *)WS2812_TIM_BUF1, WS2812_BUFLEN1);
-//	HAL_TIM_PWM_Start_DMA(ledCH4, TIM_CHANNEL_4, (uint32_t *)WS2812_TIM_BUF2, WS2812_BUFLEN2);
-
 
 }
 
@@ -517,17 +513,15 @@ void checkAllDmaRdy(void) {
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
 	HAL_StatusTypeDef temporal_status;
 
-	if (htim == ledCH1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+	if (htim == ledCH1 && htim->Channel == CHANNEL_ACTIVE_FOR_LED1) {
 		dmaCallback_led1();
 	}
-	else if (htim == ledCH2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+	else if (htim == ledCH2 && htim->Channel == CHANNEL_ACTIVE_FOR_LED2) {
 		dmaCallback_led2();
 	}
 	checkAllDmaRdy();
 
-	if (htim->Instance == &htim3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-		__NOP();
-	}
+
 
 }
 
