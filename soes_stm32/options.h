@@ -7,7 +7,7 @@
 #define __options__
 
 /* User-defined options, Options defined here will override default values */
-#include "ecat_options.h"
+#include "rtl_slavedemo/ecat_options.h"
 
 /* FoE support */
 #ifndef USE_FOE
