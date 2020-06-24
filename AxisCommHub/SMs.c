@@ -10,6 +10,7 @@
 #include "AxisCommHub_definitions.h"
 #include "SMs.h"
 #include "WS2812_Lib_MultiChannel.h"
+#include "LAN9252_spi.h"
 
 //Creation of tasks concerning the State Machines
 
@@ -139,8 +140,7 @@ osEventFlagsId_t evt_sysSignals;
 
 /******************************************* eCAT Space *********************************************************************/
 #define TEST_BYTE	0x00	//TODO This should be linked with the MEMORY MAP of LAN9252
-static uint32_t spi1;	//TODO this should be defined by the MX and as SPI
-volatile uint8_t ecatDMArcvd;	//TODO This is modified by interruptions
+extern uint8_t ecatDMArcvd;	//TODO This is modified by interruptions
 //Timeouts are defined in the task manger
 
 
@@ -426,13 +426,13 @@ void ledRings_SM (void * argument) {
 				if (errorFlag) {
 					rgbTemp = (WS2812_RGB_t){255,0,0};
 					WS2812_All_RGB(1,rgbTemp,1);
-					rgbTemp = (WS2812_RGB_t){0,0,255};
+					rgbTemp = (WS2812_RGB_t){255,0,0};
 					WS2812_All_RGB(2,rgbTemp,1);
 				}
 				else {
 					rgbTemp = (WS2812_RGB_t){0,255,0};
 					WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
-					rgbTemp = (WS2812_RGB_t){255,0,255};
+					rgbTemp = (WS2812_RGB_t){0,0,255};
 					WS2812_All_RGB(2,rgbTemp,1);
 				}
 
@@ -475,6 +475,7 @@ void ledRings_SM (void * argument) {
 
 void ecat_SM (void * argument) {
 	uint8_t error = 0;
+	uint32_t rcvdData;
 	osStatus_t timerStatus;
 	timeoutEcat = osTimerNew(timeoutCallback_ecat, osTimerOnce, NULL, NULL);	//TODO This time out only makes sense if the DMA stops working but does not guarantee that the LAN9252 is actually responding
 	if (timeoutEcat == NULL) {
@@ -485,7 +486,7 @@ void ecat_SM (void * argument) {
 		switch (ecat_step) {
 			case	ec_config:
 
-				if(ecat_SPIConfig(&spi1) == FAILED) error++;
+				if(	ecat_SPIConfig(&hspi4) == FAILED) error++;
 
 				//exit
 				if (error) {
@@ -500,14 +501,21 @@ void ecat_SM (void * argument) {
 				break;
 
 			case ec_checkConnection:
-				ecat_readRegCmd(TEST_BYTE);	//This function sends out command to receive TEST BYTE with DMA,
-				timerStatus = osTimerStart(timeoutEcat,(uint32_t)2000U);
-				if (timerStatus != osOK) {
-					__NOP();	//Handle this error during start of timer
-				}
-				//TODO this test should be scheduled regularly, maybe with a global variable that compares the ticks
+				rcvdData = lan9252_read_32(TEST_BYTE_OFFSET);	//This function sends out command to receive TEST BYTE with DMA
+//				timerStatus = osTimerStart(timeoutEcat,(uint32_t)2000U);
+//				if (timerStatus != osOK) {
+//					__NOP();	//Handle this error during start of timer
+//				}
+
 				//exit
-				ecat_step = ec_waitDMA;
+				if (rcvdData == TEST_RESPONSE) {
+					ecat_step = ec_idle;
+				}
+				else {
+					ecat_step = ec_fault;
+				}
+
+
 				break;
 
 			case	ec_waitDMA:
@@ -551,7 +559,7 @@ void ecat_SM (void * argument) {
 				__NOP();
 				osThreadSuspend(ecatSMTHandle);
 				break;
-			case ec_fault:
+			case	ec_fault:
 				//entry
 				if (osTimerIsRunning(timeoutEcat))
 				timerStatus = osTimerStop(timeoutEcat);
@@ -560,7 +568,12 @@ void ecat_SM (void * argument) {
 					//Handle this OS timer error
 				}
 				//action
-				osThreadSuspend(ecatSMTHandle);
+				notifyError(ERR_ECAT_F_COMM);
+				ecat_deinit(&hspi4);	//PENDING AND IMPORTANT This will probably create an error as soon as the LAN9252 is disconnected and the other tasks contnue trying to send data
+
+				//exit
+				ecat_step = ec_config;
+				osDelay(3000);		//Waits to restart the communication
 				break;
 			default:
 				__NOP();
@@ -775,7 +788,13 @@ int8_t tsens_start1WireCh(uint8_t channel) {
  * */
 void notifyError(uint8_t error) {
 	errorFlag = TRUE;
-	osEventFlagsSet(evt_sysSignals, SYS_EVENT);
+	//osEventFlagsSet(evt_sysSignals, SYS_EVENT);	//Pending
+
+	if (error == ERR_ECAT_F_COMM) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
+		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
+		notificationFlag = TRUE;
+		osEventFlagsSet(evt_sysSignals, LED_EVENT);
+	}
 }
 
 /* *
@@ -787,6 +806,11 @@ void notifyError(uint8_t error) {
 void notifyEvent(uint8_t event) {
 	notificationFlag= TRUE;
 	osEventFlagsSet(evt_sysSignals, SYS_EVENT);
+	if (event == EV_ECAT_READY) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
+		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
+		errorFlag = FALSE;
+		osEventFlagsSet(evt_sysSignals, LED_EVENT);
+	}
 }
 
 /*------------------------------------------ Temperature Sensors ----------------------------------------------------------*/
@@ -807,23 +831,8 @@ void tsens_read1Wire(uint8_t *chsetupOK) {
 
 /*----------------------------------------------- ECAT SM -------------------------------------------------------------*/
 
-/* *
- * @brief	Configure the SPI for ECAT Communication
- * @retval	-1 if fails, 1 otherwise
- * */
-int8_t ecat_SPIConfig(uint32_t* handlerPtr){
-	//TODO Only for test purposes
-	return 1;
-}	//TODO Update the call of the SPI handletype
 
-/* *
- * @brief	Sends through SPI+DMA the command needed to read specifically one register from LAN9252 and receiving its answer.
- * 				This does not guarantee that the LAN9252 is responding
- * 	@param	uint8_t reg:	Register as defined in the headers (mapping from LAN9252)
- * */
-void ecat_readRegCmd(uint8_t reg) {
-	__NOP();	//TODO This is only for test purposes
-}
+
 
 /* *
  * @brief	Compares the expected value of a previous consulted Register (mapped from lan9252)
@@ -842,16 +851,16 @@ void eventTesterTask (void* argument) {
 	static uint8_t counter = 0;
 	osDelay(2000);
 	while(1) {	//Infinite while required by RTOS
-		if (counter % 2 != 0) {//Each pair
-			errorFlag = TRUE;
-			osEventFlagsSet(evt_sysSignals, LED_EVENT);
+		if (counter % 2 != 0) {//Each pair	@2020.06.24	Commented out to test the Ecat SM
+			//errorFlag = TRUE;
+			//osEventFlagsSet(evt_sysSignals, LED_EVENT);
 		}
 		else {
 			errorFlag = FALSE;
 			osEventFlagsSet(evt_sysSignals, LED_EVENT);
 		}
 		notificationFlag = TRUE;
-		osDelay(3000);
+		osDelay(5000);
 		counter++;
 	}
 }

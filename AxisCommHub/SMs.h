@@ -117,7 +117,6 @@ void evh_publish(uint8_t eventHandler);
 /*------------------------------------------------ ECAT functions ---------------------------------------------------------------------*/
 
 
-int8_t ecat_SPIConfig(uint32_t* handlerPtr);	//TODO Update the call of the SPI handletype
 
 void ecat_readRegCmd(uint8_t reg);
 
