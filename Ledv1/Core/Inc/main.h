@@ -60,18 +60,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define ECAT_SCK_Pin GPIO_PIN_2
-#define ECAT_SCK_GPIO_Port GPIOE
-#define ECAT_SCS_Pin GPIO_PIN_4
-#define ECAT_SCS_GPIO_Port GPIOE
-#define ECAT_MISO_Pin GPIO_PIN_5
-#define ECAT_MISO_GPIO_Port GPIOE
-#define ECAT_MOSI_Pin GPIO_PIN_6
-#define ECAT_MOSI_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
+#define ECAT_MISO_Pin GPIO_PIN_2
+#define ECAT_MISO_GPIO_Port GPIOC
+#define ECAT_MOSI_Pin GPIO_PIN_3
+#define ECAT_MOSI_GPIO_Port GPIOC
 #define userSignal_Pin GPIO_PIN_0
 #define userSignal_GPIO_Port GPIOA
 #define WS_PWM_Pin GPIO_PIN_5
@@ -98,6 +94,8 @@ void Error_Handler(void);
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7
 #define USB_OverCurrent_GPIO_Port GPIOG
+#define ECAT_SCK_Pin GPIO_PIN_7
+#define ECAT_SCK_GPIO_Port GPIOC
 #define USB_SOF_Pin GPIO_PIN_8
 #define USB_SOF_GPIO_Port GPIOA
 #define USB_VBUS_Pin GPIO_PIN_9
@@ -112,6 +110,8 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define ECAT_NSS_Pin GPIO_PIN_1
+#define ECAT_NSS_GPIO_Port GPIOD
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

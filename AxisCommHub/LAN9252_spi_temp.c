@@ -31,7 +31,7 @@ const osThreadAttr_t ecatInitT_attributes = {
 static volatile uint8_t sendFlag;
 
 //External variables
-extern SPI_HandleTypeDef hspi4;
+extern SPI_HandleTypeDef hspi4, hspi2;
 
 /*
  *	@brief	This function is starting a transmission over SPI and DMA
@@ -41,6 +41,7 @@ void ecatInitFunc(void * argument) {
 	//HAL_SPI_Init(&hspi4);
 	//HAL_SPI_MspInit(&hspi4);
 	//HAL_SPI_RegisterCallback(&hspi4,TxCpltCallback,);
+	HAL_StatusTypeDef tempStatus;
 
 	//This is a temporal code for writing an instruction
 	for (uint8_t i=0; i<32 ; i++) {
@@ -91,14 +92,14 @@ void ecatInitFunc(void * argument) {
 		//HAL_GPIO_WritePin(ECAT_SCS_GPIO_Port, ECAT_SCS_Pin, GPIO_PIN_RESET);
 		//hspi4.Instance->CR2 ^= (1<<SPI_CR2_SSOE_Pos);
 		//hspi4.Init.NSS
-		HAL_SPI_Init(&hspi4);
+		tempStatus = HAL_SPI_Init(&hspi2);
 		if (sendFlag) {
 			//HAL_SPI_TransmitReceive_DMA(&hspi4, ecatSPITX_Buffer, ecatSPIRX_Buffer, 10);
 			//HAL_SPI_Transmit_IT(&hspi4, ecatSPITX_Buffer, 8);
 
 			//HAL_SPI_Transmit_DMA(&hspi4, ecatSPITX_Buffer,16);
 			//HAL_SPI_Receive_DMA(&hspi4, ecatSPIRX_Buffer, 4);
-			HAL_SPI_TransmitReceive_DMA(&hspi4, ecatSPITX_Buffer, ecatSPIRX_Buffer, 24);
+			tempStatus = HAL_SPI_TransmitReceive_DMA(&hspi2, ecatSPITX_Buffer, ecatSPIRX_Buffer, 24);
 			//sendFlag = 0;
 		}
 		osDelay(20);
