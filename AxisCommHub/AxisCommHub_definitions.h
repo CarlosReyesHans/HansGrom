@@ -8,6 +8,9 @@
 #ifndef AXISCOMMHUB_DEFINITIONS_H_
 #define AXISCOMMHUB_DEFINITIONS_H_
 
+//	General include files
+#include "LAN9252_spi.h"
+
 //struct temp	//TODO This should be an struct to better handling
 #define	NUM_OF_SENSORS	3
 #define	TRUE	1

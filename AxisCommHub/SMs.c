@@ -7,6 +7,7 @@
 #include "cmsis_os.h"
 #include "main.h"
 #include "stdio.h"
+#include "AxisCommHub_definitions.h"
 #include "SMs.h"
 #include "WS2812_Lib_MultiChannel.h"
 
@@ -110,6 +111,11 @@ const osThreadAttr_t eventTesterT_Attributes = {
 		.cb_size = sizeof(eventTesterTControlBlock),
 		.priority = osPriorityBelowNormal1,
 };
+
+//	Extern declaration of tasks
+extern osThreadId_t ecatInitTHandle;
+extern StaticTask_t ecatInitTControlBlock;
+extern osThreadAttr_t ecatInitT_attributes;
 
 //	Declaring the states
 enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publish_data,t_sleep,t_error}tS_step;
@@ -701,6 +707,9 @@ void addThreads(void) {
 	uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
+	ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);
+
+
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
 	//Debug tasks
