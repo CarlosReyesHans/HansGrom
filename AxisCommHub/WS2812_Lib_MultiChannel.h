@@ -14,9 +14,9 @@
 TIM_HandleTypeDef htim1;//htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
-#define WS2812_NUM_LEDS_CH1		5	//58)
+#define WS2812_NUM_LEDS_CH1		2	//58)
 //Multichannel
-#define WS2812_NUM_LEDS_CH2		5
+#define WS2812_NUM_LEDS_CH2		2
 #define WS2812_NUM_LEDS_CH3		10
 #define WS2812_NUM_LEDS_CH4		10
 

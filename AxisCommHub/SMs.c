@@ -121,7 +121,7 @@ extern osThreadAttr_t ecatInitT_attributes;
 //	Declaring the states
 enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publish_data,t_sleep,t_error}tS_step;
 enum enum_ledRingStates {L_config,L_start,L_sleep,L_waitDMA,L_updateEffect,l_waitRefresh,L_updateColor,L_restart,L_error }led_step;
-enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep}ecat_step;
+enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep,ec_transmitting,ec_restart}ecat_step;	//pending Delete the waitDMA state
 enum enum_eventHStates {evH_waiting, evH_reportErr,evH_notifyEv,evH_finish}evH_step;
 enum enum_events {error_critical,error_non_critical,warning,event_success}eventType;
 
@@ -500,7 +500,7 @@ void ecat_SM (void * argument) {
 
 				break;
 
-			case ec_checkConnection:
+			case	ec_checkConnection:
 				rcvdData = lan9252_read_32(TEST_BYTE_OFFSET);	//This function sends out command to receive TEST BYTE with DMA
 //				timerStatus = osTimerStart(timeoutEcat,(uint32_t)2000U);
 //				if (timerStatus != osOK) {
@@ -509,7 +509,9 @@ void ecat_SM (void * argument) {
 
 				//exit
 				if (rcvdData == TEST_RESPONSE) {
+					rcvdData = 0x00;
 					ecat_step = ec_idle;
+
 				}
 				else {
 					ecat_step = ec_fault;
@@ -552,12 +554,17 @@ void ecat_SM (void * argument) {
 				//action
 				notifyEvent(EV_ECAT_READY);
 				//exit
-				ecat_step = ec_sleep;
+				ecat_step = ec_transmitting;
 				osThreadResume(ecatTestTHandler);
+				break;
+			case	ec_transmitting:
+				osEventFlagsWait(evt_sysSignals, ECAT_EVENT, osFlagsWaitAll, osWaitForever);
+				ecat_step = ec_fault;		//So far the error in communication is the only event that the periodic task can generate, therefore task should by self suspended by now.
 				break;
 			case	ec_sleep:
 				__NOP();
 				osThreadSuspend(ecatSMTHandle);
+
 				break;
 			case	ec_fault:
 				//entry
@@ -569,11 +576,15 @@ void ecat_SM (void * argument) {
 				}
 				//action
 				notifyError(ERR_ECAT_F_COMM);
+				ecat_step = ec_restart;
+				break;
+			case	ec_restart:
+				//action
 				ecat_deinit(&hspi4);	//PENDING AND IMPORTANT This will probably create an error as soon as the LAN9252 is disconnected and the other tasks contnue trying to send data
 
 				//exit
 				ecat_step = ec_config;
-				osDelay(3000);		//Waits to restart the communication
+				osDelay(3000);		//Waits to restart the communication, meanwhile another task is attended
 				break;
 			default:
 				__NOP();
@@ -690,13 +701,38 @@ void uartUpdt (void * argument) {
 void ecatUpdt (void * argument) {
 
 	uint32_t ecat_tick;
+	static uint16_t counter, commErrorCnt, commChckCnt;
+	uint32_t tempResponse;
+
 	ecat_tick = osKernelGetTickCount();
+	counter = commErrorCnt = commChckCnt = 0;
 	while (1) {
+		ecat_tick += ECAT_UPDT_PERIOD_TEST_IN_MS;			//pending what would happen be MAX_VALUE_UINT32??
+
 		HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);	//TODO This will be an output to watch with the Logic Analizer
 		//HAL_GPIO_TogglePin(ecat_testPin_GPIO_Port, ecat_testPin_Pin);
+		counter++;
 
-		ecat_tick += 1;
-		osDelayUntil(ecat_tick);	//chckme check whether this will work with 1 ms
+		if (!(counter % (ECAT_CHECK_PERIOD_FACTOR))) {	//Checks connection
+			commChckCnt++;
+			tempResponse = lan9252_read_32(TEST_BYTE_OFFSET);
+			if (tempResponse != (uint32_t)TEST_RESPONSE) {	//If error response
+				commErrorCnt++;
+				errorFlag = TRUE;
+				osEventFlagsSet(evt_sysSignals, LED_EVENT);
+				//osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+				//osThreadSuspend(ecatTestTHandler);
+				//Returning from a suspension either from initialization or from error
+				//ecat_tick = osKernelGetTickCount();
+			}
+			if (commChckCnt >= COMM_TESTING_TIMES) {
+				commErrorCnt = 0;
+				commChckCnt = 0;
+			}
+		}
+
+		osDelayUntil(ecat_tick);	//	This work with the minimal value of 1ms (tested only with generation of the test signal)
+
 	}
 }
 
@@ -720,8 +756,7 @@ void addThreads(void) {
 	uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
-	ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);
-
+	//ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);	//Only for raw tests with the SPI
 
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);

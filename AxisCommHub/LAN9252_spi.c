@@ -79,7 +79,7 @@ uint32_t lan9252_read_32 (uint32_t address)
    data[0] = ESC_CMD_FAST_READ;
    data[1] = ((address >> 8) & 0xFF);
    data[2] = (address & 0xFF);
-   data[3] = ESC_CMD_FAST_READ_DUMMY;
+   data[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
 
    /* Select device. */
    //spi_select (lan9252);

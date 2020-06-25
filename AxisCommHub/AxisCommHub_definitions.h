@@ -17,6 +17,7 @@
 #define	FALSE	0
 #define FAILED	-1
 
+
 //	Declaration of errors	//TODO There should be the variable that will have the listed values, but it will be different than the osEventFlag which is only general
 #define	ERR_SENSOR_INIT		10
 #define ERR_SENSOR_LOST		11
@@ -41,5 +42,13 @@
 #define CHANNEL_FOR_LED2	TIM_CHANNEL_2
 #define CHANNEL_ACTIVE_FOR_LED1	HAL_TIM_ACTIVE_CHANNEL_1
 #define CHANNEL_ACTIVE_FOR_LED2 HAL_TIM_ACTIVE_CHANNEL_2
+
+
+//	Overall testing definitions
+
+#define ECAT_UPDT_PERIOD_TEST_IN_MS		10	//1>> RT	10-15 >> Industrial RT 	100>> Non-critical variables monitoring
+#define	ECAT_CONNECTION_CHECK_PERIOD_IN_MS	1000
+#define	ECAT_CHECK_PERIOD_FACTOR	ECAT_CONNECTION_CHECK_PERIOD_IN_MS/ECAT_UPDT_PERIOD_TEST_IN_MS
+#define COMM_TESTING_TIMES	100U
 
 #endif /* AXISCOMMHUB_DEFINITIONS_H_ */
