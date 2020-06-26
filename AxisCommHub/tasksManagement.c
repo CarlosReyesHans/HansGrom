@@ -6,7 +6,7 @@
  */
 
 #include "main.h"
-#include "WS2812_Lib.h"
+//#include "WS2812_Lib.h"
 #include "userFunctions.h"
 
 //TODO this definition should be in a library

@@ -26,10 +26,7 @@ uint8_t buffer_updated = 0;
 static TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;
 static DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
 
-volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd, refreshTimeoutLed;
-//volatile uint8_t refreshTime;	//TODO Delete if it is not used
-volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING],ledRing2Data[NUM_OF_LEDS_PER_RING];
+
 
 /*-------------------------------------------------Extern variables from other SMs-------------------------------------------------------------*/
 extern osEventFlagsId_t evt_sysSignals;

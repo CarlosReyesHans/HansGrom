@@ -17,8 +17,6 @@
 #include "main.h"
 
 
-//typedef short SPI_HandleTypeDef;	//ONLYTEST delete as soon as the real DEF is included
-
 //Variables or handlers
 TIM_HandleTypeDef* usTimerHandler;
 TIM_HandleTypeDef* nsTimerHandler;

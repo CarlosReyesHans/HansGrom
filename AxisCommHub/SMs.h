@@ -7,16 +7,57 @@
 
 #ifndef SMS_H_
 #define SMS_H_
+#pragma once
 
 #include "AxisCommHub_definitions.h"
+#include "stdio.h"
+#include "cmsis_os.h"
+#include "WS2812_Lib_MultiChannel.h"
+#include "LAN9252_spi.h"
 
-/******************************************* LED Rings Space *********************************************************************/
-#define MAX_OF_LEDRINGS	4		//The functions are set for only 2, 4 needs modifications
-#define NUM_OF_LEDRINGS	2
-#define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
-#define EFFECTS_ACTIVATED	0
-#define	EFFECT_REFRESH_PERIOD	10U	//TODO this sn=hould be linked to the library times the refresh period
-#define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms @ 60HZ
+#include "smLed.h"
+#include "smEcat.h"
+#include "smEvH.h"
+
+
+
+//Global declarations for all SMs
+
+
+//	Extern declaration of tasks
+extern osThreadId_t ecatInitTHandle;
+extern StaticTask_t ecatInitTControlBlock;
+extern osThreadAttr_t ecatInitT_attributes;
+
+
+//Extern declaration of peripherals
+extern TIM_HandleTypeDef htim2,htim3,htim4,htim8;	//This should have been defined by the MX
+extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_ch2_ch4;//pending the channel needs to be updated after the tests hdma_tim2_up_ch3
+
+//	Declaring the states
+enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publish_data,t_sleep,t_error}tS_step;
+enum enum_ledRingStates {L_config,L_start,L_sleep,L_waitDMA,L_updateEffect,l_waitRefresh,L_updateColor,L_restart,L_error }led_step;
+enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep,ec_transmitting,ec_restart}ecat_step;	//pending Delete the waitDMA state
+enum enum_eventHStates {evH_waiting, evH_reportErr,evH_notifyEv,evH_finish}evH_step;
+enum enum_events {error_critical,error_non_critical,warning,event_success}eventType;
+
+osEventFlagsId_t evt_sysSignals;
+
+volatile uint8_t notificationFlag;
+volatile uint8_t errorFlag; //Assume that the error flag will be changed by the the functions report and notify.
+
+//	Task handlers for SMs
+osThreadId_t tempSensTHandle;
+osThreadId_t ledRingsTHandle;
+osThreadId_t ecatSMTHandle;
+osThreadId_t eventHTHandle;
+
+//	Task handlers for auxiliar tasks
+osThreadId_t uartPrintTHandler;
+osThreadId_t ecatTestTHandler;
+osThreadId_t taskManagerTHandler;
+osThreadId_t eventTesterTHandler;
+
 
 /*********************************New SM Functions*************************************************/
 
@@ -74,105 +115,16 @@ uint8_t tsens_updtBuffer2publish(int8_t* buffer2write);
 
 /*------------------------------------------Event Handler SM---------------------------------------------------------------------------*/
 
-/* *
- * @brief	Reports an error to the eventHandler* using only the defined erros as numbers
- * 				-This could be an struct? to be an error handler?
- * @param	uint8_t	error: Defined error number
- * */
-void notifyError(uint8_t error);
 
-/* *
- * @brief	Reports an event to the eventHandler* using only the defined events as numbers
- * 				-This could be an struct? to be an event handler?
- * @param	uint8_t	event: Defined event number
- * */
-void notifyEvent(uint8_t event);
-
-/* *
- * @brief	Reports an error to the eventHandler* depending on the values of a given buffer with temperature values. It
- * 				maps the error depending on the active Channels
- * 				-This should create a signal or something similar to notify the handler (create an element in a queue OS)
- * @param	uint8_t	*activeChannels: array with the information of channels that are currently active
- * @param	uint8_t	index:	position of the overheated channel relative to the amount of ACTIVE channels	//TODO this could be a general struct per channel, where info like this could be stored
- * */
-void evh_reportChError(uint8_t	*activeChannels,uint8_t	index);
-
-/* *
- * @brief	Maps the error from an error Handler //TODO if it is handler it might work as an struct, just saying
- * @param	uint8_t	errorHandler:	Temporary it is only the number of the error that is being handled
- * @retval	uint8_t	Type of the event depending to its criticallity, based on enum
- * */
-
-uint8_t getCriticality(uint8_t	errorHandler);
-
-/* *
- * @brief	Publish an event/error over different buses according to the criticality and the availability of the channels.
- * 				TODO PENDING this should check the state of the spi handler and create an event in the ECAT bus
- * @param	uint8_t eventHandler: As defined and corresponding to an error or an event //CHCKME This could be a member of an struct
- * @param	uint8_t critical/non critical boolean //chckme is this needed?
- * */
-void evh_publish(uint8_t eventHandler);
 
 
 /*------------------------------------------------ ECAT functions ---------------------------------------------------------------------*/
 
 
 
-void ecat_readRegCmd(uint8_t reg);
-
-/* *
- * @brief	Reads out the last values of the ecat buffer and stores it in a given buffer to publish
- * @param	int8_t* buffer2write: buffer that will contain the temperature data to be published
- * @retval	0 if ecat buffer data is not available or any other error,1 i f successful
- * */
-uint8_t ecat_updtBuffer2publish(uint8_t* buffer2write);
-
-/* *
- * @brief	Compares the expected value of a previous consulted Register (mapped from lan9252)
- * @param	uint8_t reg: name of the register that was readout and whose content will be verified
- * @retval	1 if pass, -1 otherwise
- * */
-int8_t ecatVerifyResp(uint8_t reg);
-
-/*--------------------------------------------LED Rings functions-------------------------------------------------------------------------*/
 
 
 
-
-/* *
- * @brief Modifies the currentColorsArray to the initial values and sets the predefined effect
- * */
-void led_setInitEffects(void);
-
-/**
- * @brief	Change the current system colors, it also takes into consideration previous states	//TODO this should be atomic
- * 				TODO This means, if previous color was for a critical error, it is not gonna be changed by a warning event color
- * 				-This does not include effects but may set a flag of the correspondent effect
- * @param	currentColorsArray: The array that stores the current system colors	//CHCKME Since there is only one system color buffer, it should not be necessary
- * @param	uint8_t criticality: based on the ennum eventType, for instance error_critical, warning or successful event
- * */
-void led_changeSysColors(uint8_t* currentColorsArray, uint8_t criticality);
-
-
-/**
- * @brief	Change the color in the buffer that is sent through DMA	//TODO this should be atomic and will update both buffers for both LedRingChannels
- * @param	currentColorsArray: The array that stores the current system colors
- *
- * */
-void led_colorBufferUpdt(uint8_t* currentColorsArray);
-
-/* *
- * @brief	Starts a timer with HW or CMSIS, almost same as timeout //TODO this could be the same action
- * */
-void led_startTimerRefresh(uint16_t ms);
-
-/* *
- * @brief	Compares a possible global variable. that stores the current data refresh time TICK, with the TICK of a buffer effect.
- * 				for instance, every 10 data updates over LED Interface may lead to a 1 Hz update rate.
- * @retval	Returns 1 if the color buffer actualization is needed.
- * */
-
-uint8_t led_effectRateUpdt(void);
 
 /*--------------------------------------------Auxiliar functions-------------------------------------------------------------------------*/
 
@@ -194,12 +146,6 @@ void updtStatesBuffer(uint8_t* statesBuffer);
 
 void addThreads(void);
 
-
-void timeoutCallback_led(void * argument);
-
-void refreshCallback_led(void * argument);
-
-void timeoutCallback_ecat(void * argument);
 
 void timeoutCallback_tsens(void * argument);
 

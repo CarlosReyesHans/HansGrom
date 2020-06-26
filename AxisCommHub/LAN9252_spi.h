@@ -9,7 +9,9 @@
 #define LAN9252_SPI_TEMP_H_
 
 #include "cmsis_os.h"
+#include "main.h"
 #include "AxisCommHub_definitions.h"
+
 
 #define TEST_BYTE_OFFSET	0x064u
 #define	TEST_BYTE_RESULT_H	0x43

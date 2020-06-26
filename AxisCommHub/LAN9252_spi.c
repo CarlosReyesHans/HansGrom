@@ -21,6 +21,15 @@ uint8_t	ecatSPITX_Buffer [32];
 static uint8_t tempSpiTxBuffer[8] = {DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE,DUMMY_BYTE};
 static uint8_t tempSpiRxBuffer[8];
 
+
+//Global variables
+static volatile uint8_t sendFlag;
+SPI_HandleTypeDef *spi_LAN9252;
+volatile uint8_t ecatDMArcvd, ecatDMAsent;	//Used in external SMs
+//External variables
+
+
+
 //Creation of tasks concerning the SPI initialization
 
 osThreadId_t ecatInitTHandle;
@@ -35,11 +44,7 @@ const osThreadAttr_t ecatInitT_attributes = {
 		.priority = (osPriority_t) osPriorityAboveNormal,
 };
 
-//Global variables
-static volatile uint8_t sendFlag;
-SPI_HandleTypeDef *spi_LAN9252;
-volatile uint8_t ecatDMArcvd, ecatDMAsent;
-//External variables
+
 
 
 

@@ -10,6 +10,7 @@
 
 //	General include files
 #include "LAN9252_spi.h"
+#include "main.h"
 
 //struct temp	//TODO This should be an struct to better handling
 #define	NUM_OF_SENSORS	3

@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "stm32f4xx_hal.h"
+//#include "stm32f4xx_hal_spi.h"
 #include "SMs.h"
-
+#include "smLed.h"
 TIM_HandleTypeDef htim1;//htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
@@ -29,6 +29,17 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 
 #define	WS2812_MIN_REFRESH_TIME		(1.25*24*WS2812_NUM_LEDS_CH1+50)/1000	//This is 2.15 ms for 70 LEDS
 #define	WS2812_REFRESH_TIME			20		//ms, 33ms -> 30 Hz; 20 -> 50Hz : Each Refresh time the WSB2812 will be updated
+
+// Global variables for Axis communication board
+
+volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
+volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd, refreshTimeoutLed;
+//volatile uint8_t refreshTime;	//TODO Delete if it is not used
+volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING], ledRing2Data[NUM_OF_LEDS_PER_RING];
+
+
+
+
 //--------------------------------------------------------------
 // RGB LED Farbdefinition (3 x 8bit)
 //--------------------------------------------------------------
