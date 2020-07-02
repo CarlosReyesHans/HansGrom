@@ -52,4 +52,7 @@
 #define	ECAT_CHECK_PERIOD_FACTOR	ECAT_CONNECTION_CHECK_PERIOD_IN_MS/ECAT_UPDT_PERIOD_TEST_IN_MS
 #define COMM_TESTING_TIMES	100U
 
+//	Taken from linux definitions and needed by SOES
+#define BIT(nr) (1UL << (nr))
+
 #endif /* AXISCOMMHUB_DEFINITIONS_H_ */

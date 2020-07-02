@@ -7,6 +7,9 @@
 
 #include "SMs.h"
 #include "smEcat.h"
+#include "LAN9252_spi.h"
+#include "esc.h"
+#include "esc_hw.h"
 
 
 osTimerId_t timeoutEcat;	//PEnding this could be local or static
@@ -20,6 +23,10 @@ extern volatile uint8_t ecatDMArcvd;	//Defined in LAN9252 library
  */
 
 void ecat_SM (void * argument) {
+
+	//TEMP for TESTING
+	uint16_t ESC_status;
+	//FINISHES
 	uint8_t error = 0;
 	uint32_t rcvdData;
 	osStatus_t timerStatus;
@@ -41,6 +48,7 @@ void ecat_SM (void * argument) {
 					ecat_step = ec_fault;
 					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				else {
+
 					ecat_step = ec_checkConnection;
 				}
 
@@ -56,6 +64,16 @@ void ecat_SM (void * argument) {
 				//exit
 				if (rcvdData == TEST_RESPONSE) {
 					rcvdData = 0x00;
+					ESC_init_mod();
+
+				   /*  wait until ESC is started up */	//This should be deleted afterwards, since it is only temporary while testing ecat_slv.c
+				   while ((rcvdData & 0x0001) == 0)
+				   {
+					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
+								sizeof (ESC_status));
+					  ESC_status = etohs (ESC_status);
+				   }
+
 					ecat_step = ec_idle;
 
 				}

@@ -8,6 +8,8 @@
 #ifndef SMECAT_H_
 #define SMECAT_H_
 
+
+
 void ecat_SM (void * argument);
 
 void ecatUpdt (void * argument);

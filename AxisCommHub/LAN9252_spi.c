@@ -55,7 +55,7 @@ const osThreadAttr_t ecatInitT_attributes = {
  * *****************************************************************************************************************************/
 
 /* lan9252 singel write */
-static void lan9252_write_32 (uint16_t address, uint32_t val)
+void lan9252_write_32 (uint16_t address, uint32_t val)
 {
     uint8_t data[7];
 
@@ -143,6 +143,29 @@ void ecat_read_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata
 	rxdata_array[1] = tempSpiRxBuffer[5];
 	rxdata_array[2] = tempSpiRxBuffer[6];
 	rxdata_array[3] = tempSpiRxBuffer[7];
+}
+
+/*
+ * @brief	This is a temporary function to test the communication
+ * */
+
+void ESC_init_mod (void)//(const esc_cfg_t * config)
+{
+   uint32_t value;
+   //const char * spi_name = (char *)config->user_arg;
+   //lan9252 = open (spi_name, O_RDWR, 0);
+
+   /* Reset the ecat core here due to evb-lan9252-digio not having any GPIO
+    * for that purpose.
+    */
+   lan9252_write_32(ESC_RESET_CTRL_REG,ESC_RESET_CTRL_RST);
+   do
+   {
+      value = lan9252_read_32(ESC_CSR_CMD_REG);
+   } while(value & ESC_RESET_CTRL_RST);
+
+
+
 }
 
 
