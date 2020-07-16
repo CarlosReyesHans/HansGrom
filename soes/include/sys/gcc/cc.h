@@ -78,7 +78,7 @@ extern "C"
 #define DPRINT(...) printf ("soes: "__VA_ARGS__)
 #endif
 #else
-#define DPRINT(...) printf ("soes: "__VA_ARGS__)
+#define DPRINT(...)
 #endif
 
 #ifdef __cplusplus

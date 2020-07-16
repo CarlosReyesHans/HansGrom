@@ -25,7 +25,7 @@ static uint8_t tempSpiRxBuffer[8];
 //Global variables
 static volatile uint8_t sendFlag;
 SPI_HandleTypeDef *spi_LAN9252;
-volatile uint8_t ecatDMArcvd, ecatDMAsent;	//Used in external SMs
+volatile uint8_t ecatDMArcvd, ecatDMAsent, ecatDMAonlyRcvd;	//Used in external SMs
 //External variables
 
 
@@ -91,7 +91,9 @@ uint32_t lan9252_read_32 (uint32_t address)
    /* Read data */
 //   write (lan9252, data, sizeof(data));
 //   read (lan9252, result, sizeof(result));
-   ecat_read_raw(LAN9252_PORT1,data,result);
+   ecat_write_raw(LAN9252_PORT1, data, sizeof(data));
+   ecat_read_raw(LAN9252_PORT1, result, sizeof(result));
+   //ecat_txread_raw(LAN9252_PORT1,data,result);
    /* Un-select device. */
    //spi_unselect (lan9252);
 
@@ -123,7 +125,7 @@ void ecat_write_raw(uint8_t lan9252_port, uint8_t * txdata_array, size_t size) {
  * @returns	nothing
  * */
 
-void ecat_read_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata_array) {
+void ecat_txread_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata_array) {
 	HAL_StatusTypeDef tempStatus;
 	tempSpiTxBuffer[0] = txdata_array[0];
 	tempSpiTxBuffer[1] = txdata_array[1];
@@ -138,11 +140,32 @@ void ecat_read_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata
 	}
 	else
 		return;
-
 	rxdata_array[0] = tempSpiRxBuffer[4];
 	rxdata_array[1] = tempSpiRxBuffer[5];
 	rxdata_array[2] = tempSpiRxBuffer[6];
 	rxdata_array[3] = tempSpiRxBuffer[7];
+}
+
+/* *
+ * @brief	Reads out data over SPI using DMA. This only returns when the exact time for receiving the data has passed (using dma interruption).
+ * @param	device
+ * @param	array pointer to data
+ * @param	array pointer to buffer where data will be stored
+ * @param	size in bytes of the array to be ssent
+ * @returns	nothing
+ * */
+
+void ecat_read_raw(uint8_t lan9252_port, uint8_t * rxdata_array,uint16_t Size) {
+	HAL_StatusTypeDef tempStatus;
+
+	tempStatus = HAL_SPI_Receive_DMA(spi_LAN9252, rxdata_array, Size);
+
+	if(tempStatus == HAL_OK) {
+		while(ecatDMAonlyRcvd==FALSE);//waits until the DMA complete RX is set
+		ecatDMAonlyRcvd=FALSE;	//TODO This variable should be reinitialize once the whole LAN9252 is restarted
+	}
+	else
+		return;
 }
 
 /*
@@ -290,6 +313,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
 }
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
+	ecatDMAonlyRcvd = TRUE;
 	sendFlag = 1;
 }
 

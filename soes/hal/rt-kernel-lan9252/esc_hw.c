@@ -12,11 +12,9 @@
  */
 
 #include "esc.h"
-#include "esc_hw.h"
-#include "LAN9252_spi.h"
-
+#include <spi/spi.h>
 #include <string.h>
-
+#include <gpio.h>
 
 #define ESC_CMD_SERIAL_WRITE     0x02
 #define ESC_CMD_SERIAL_READ      0x03
@@ -55,18 +53,63 @@
 
 static int lan9252 = -1;
 
+/* lan9252 singel write */
+static void lan9252_write_32 (uint16_t address, uint32_t val)
+{
+    uint8_t data[7];
 
+    data[0] = ESC_CMD_SERIAL_WRITE;
+    data[1] = ((address >> 8) & 0xFF);
+    data[2] = (address & 0xFF);
+    data[3] = (val & 0xFF);
+    data[4] = ((val >> 8) & 0xFF);
+    data[5] = ((val >> 16) & 0xFF);
+    data[6] = ((val >> 24) & 0xFF);
+
+    /* Select device. */
+    spi_select (lan9252);
+    /* Write data */
+    write (lan9252, data, sizeof(data));
+    /* Un-select device. */
+    spi_unselect (lan9252);
+}
+
+/* lan9252 single read */
+static uint32_t lan9252_read_32 (uint32_t address)
+{
+   uint8_t data[4];
+   uint8_t result[4];
+
+   data[0] = ESC_CMD_FAST_READ;
+   data[1] = ((address >> 8) & 0xFF);
+   data[2] = (address & 0xFF);
+   data[3] = ESC_CMD_FAST_READ_DUMMY;
+
+   /* Select device. */
+   spi_select (lan9252);
+   /* Read data */
+   write (lan9252, data, sizeof(data));
+   read (lan9252, result, sizeof(result));
+   /* Un-select device. */
+   spi_unselect (lan9252);
+
+   return ((result[3] << 24) |
+           (result[2] << 16) |
+           (result[1] << 8) |
+            result[0]);
+}
 
 /* ESC read CSR function */
-void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
+static void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
 {
    uint32_t value;
+
    value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | address);
    lan9252_write_32(ESC_CSR_CMD_REG, value);
+
    do
    {
-	  value = lan9252_read_32(ESC_CSR_CMD_REG);
-
+      value = lan9252_read_32(ESC_CSR_CMD_REG);
    } while(value & ESC_CSR_CMD_BUSY);
 
    value = lan9252_read_32(ESC_CSR_DATA_REG);
@@ -90,7 +133,7 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
 }
 
 /* ESC read process data ram function */
-void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
+static void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
 {
    uint32_t value;
    uint8_t * temp_buf = buf;
@@ -134,27 +177,27 @@ void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
    byte_offset += temp_len;
 
    /* Select device. */
-   //spi_select (lan9252);
+   spi_select (lan9252);
    /* Send command and address for fifo read */
    data[0] = ESC_CMD_FAST_READ;
    data[1] = ((ESC_PRAM_RD_FIFO_REG >> 8) & 0xFF);
    data[2] = (ESC_PRAM_RD_FIFO_REG & 0xFF);
    data[3] = ESC_CMD_FAST_READ_DUMMY;
-   ecat_write_raw (lan9252, data, sizeof(data));
+   write (lan9252, data, sizeof(data));
 
    /* Continue reading until we have read len */
-   while(len > 0)	//Pending this part could be DMA
+   while(len > 0)
    {
       temp_len = (len > 4) ? 4: len;
       /* Always read 4 byte */
-      ecat_read_raw (lan9252, (temp_buf + byte_offset), sizeof(uint32_t));
+      read (lan9252, (temp_buf + byte_offset), sizeof(uint32_t));
 
       fifo_cnt--;
       len -= temp_len;
       byte_offset += temp_len;
    }
    /* Un-select device. */
-   //spi_unselect (lan9252);
+   spi_unselect (lan9252);
 }
 
 /* ESC write process data ram function */
@@ -208,7 +251,7 @@ static void ESC_write_pram (uint16_t address, void *buf, uint16_t len)
    data[0] = ESC_CMD_SERIAL_WRITE;
    data[1] = ((ESC_PRAM_WR_FIFO_REG >> 8) & 0xFF);
    data[2] = (ESC_PRAM_WR_FIFO_REG & 0xFF);
-   ecat_write_raw (lan9252, data, sizeof(data));
+   write (lan9252, data, sizeof(data));
 
    /* Continue reading until we have read len */
    while(len > 0)
@@ -217,7 +260,7 @@ static void ESC_write_pram (uint16_t address, void *buf, uint16_t len)
       value = 0;
       memcpy((uint8_t *)&value, (temp_buf + byte_offset), temp_len);
       /* Always write 4 byte */
-      ecat_write_raw (lan9252, (void *)&value, sizeof(value));
+      write (lan9252, (void *)&value, sizeof(value));
 
       fifo_cnt--;
       len -= temp_len;
@@ -228,7 +271,7 @@ static void ESC_write_pram (uint16_t address, void *buf, uint16_t len)
 }
 
 
-/** ESC read functi+on used by the Slave stack.
+/** ESC read function used by the Slave stack.
  *
  * @param[in]   address     = address of ESC register to read
  * @param[out]  buf         = pointer to buffer to read in
@@ -363,11 +406,4 @@ void ESC_init (const esc_cfg_t * config)
 
 
 
-}
-
-int open(const char *pathname, int flags, uint8_t mode) {
-	if((*pathname) == "LOCAL_SPI" && flags == O_RDWR && mode == 0)
-	return STM32_SPI;
-	else
-	return -1;
 }

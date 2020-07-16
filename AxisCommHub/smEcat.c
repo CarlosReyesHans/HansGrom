@@ -12,10 +12,20 @@
 #include "esc_hw.h"
 
 
-osTimerId_t timeoutEcat;	//PEnding this could be local or static
+osTimerId_t timeoutEcat;	//PEnding this could be local or static?
 static uint8_t timedoutEcat;
 
 extern volatile uint8_t ecatDMArcvd;	//Defined in LAN9252 library
+
+/*---------------------------Variables needed by SOES Application---------------------------*/
+
+extern _ESCvar ESCvar;		// << Instance of the ESC that are declared within the sampleApp.c
+void APP_safeoutput ();	//TODO
+extern _MBXcontrol MBXcontrol[];
+extern uint8_t MBX[];
+extern _SMmap SMmap2[];
+extern _SMmap SMmap3[];
+
 
 /*
  * @brief Sate Machine for overall task of eCAT interface
@@ -72,6 +82,7 @@ void ecat_SM (void * argument) {
 					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
 								sizeof (ESC_status));
 					  ESC_status = etohs (ESC_status);
+					  rcvdData = ESC_status;
 				   }
 
 					ecat_step = ec_idle;
@@ -182,11 +193,14 @@ void ecatUpdt (void * argument) {
 
 		if (!(counter % (ECAT_CHECK_PERIOD_FACTOR))) {	//Checks connection
 			commChckCnt++;
+			tempResponse = 0x00;
+			ecat_SPIConfig(&hspi4);
 			tempResponse = lan9252_read_32(TEST_BYTE_OFFSET);
+			ecat_deinit(&hspi4);
 			if (tempResponse != (uint32_t)TEST_RESPONSE) {	//If error response
 				commErrorCnt++;
-				errorFlag = TRUE;
-				osEventFlagsSet(evt_sysSignals, LED_EVENT);
+				//errorFlag = TRUE;
+				//osEventFlagsSet(evt_sysSignals, LED_EVENT);
 				//osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
 				//osThreadSuspend(ecatTestTHandler);
 				//Returning from a suspension either from initialization or from error

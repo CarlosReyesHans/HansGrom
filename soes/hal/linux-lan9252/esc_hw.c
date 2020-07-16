@@ -10,13 +10,13 @@
  * Function to read and write commands to the ESC. Used to read/write ESC
  * registers and memory.
  */
-
 #include "esc.h"
-#include "esc_hw.h"
-#include "LAN9252_spi.h"
-
 #include <string.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
 
+#define BIT(x)	1 << (x)
 
 #define ESC_CMD_SERIAL_WRITE     0x02
 #define ESC_CMD_SERIAL_READ      0x03
@@ -55,18 +55,58 @@
 
 static int lan9252 = -1;
 
+/* lan9252 singel write */
+static void lan9252_write_32 (uint16_t address, uint32_t val)
+{
+    uint8_t data[7];
+    int n;
 
+    data[0] = ESC_CMD_SERIAL_WRITE;
+    data[1] = ((address >> 8) & 0xFF);
+    data[2] = (address & 0xFF);
+    data[3] = (val & 0xFF);
+    data[4] = ((val >> 8) & 0xFF);
+    data[5] = ((val >> 16) & 0xFF);
+    data[6] = ((val >> 24) & 0xFF);
+
+    /* Write data */
+    n = write (lan9252, data, sizeof(data));
+    (void)n;
+}
+
+/* lan9252 single read */
+static uint32_t lan9252_read_32 (uint32_t address)
+{
+   uint8_t data[2];
+   uint8_t result[4];
+   uint16_t lseek_addr;
+   int n;
+
+   data[0] = ((address >>8) & 0xFF);
+   data[1] = (address & 0xFF);
+
+	lseek_addr=((uint16_t)data[0] << 8) | data[1];
+	lseek (lan9252, lseek_addr, SEEK_SET);
+   n = read (lan9252, result, sizeof(result));
+   (void)n;
+
+   return ((result[3] << 24) |
+           (result[2] << 16) |
+           (result[1] << 8) |
+            result[0]);
+}
 
 /* ESC read CSR function */
-void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
+static void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
 {
    uint32_t value;
+
    value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | address);
    lan9252_write_32(ESC_CSR_CMD_REG, value);
+
    do
    {
-	  value = lan9252_read_32(ESC_CSR_CMD_REG);
-
+      value = lan9252_read_32(ESC_CSR_CMD_REG);
    } while(value & ESC_CSR_CMD_BUSY);
 
    value = lan9252_read_32(ESC_CSR_DATA_REG);
@@ -90,12 +130,17 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
 }
 
 /* ESC read process data ram function */
-void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
+static void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
 {
    uint32_t value;
    uint8_t * temp_buf = buf;
    uint16_t byte_offset = 0;
-   uint8_t fifo_cnt, first_byte_position, temp_len, data[4];
+   uint8_t fifo_cnt, first_byte_position, temp_len;
+   uint8_t *buffer;
+   int i, array_size, size;
+   float quotient,remainder;
+   uint32_t temp;
+   int n;
 
    value = ESC_PRAM_CMD_ABORT;
    lan9252_write_32(ESC_PRAM_RD_CMD_REG, value);
@@ -133,28 +178,42 @@ void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
    len -= temp_len;
    byte_offset += temp_len;
 
-   /* Select device. */
-   //spi_select (lan9252);
-   /* Send command and address for fifo read */
-   data[0] = ESC_CMD_FAST_READ;
-   data[1] = ((ESC_PRAM_RD_FIFO_REG >> 8) & 0xFF);
-   data[2] = (ESC_PRAM_RD_FIFO_REG & 0xFF);
-   data[3] = ESC_CMD_FAST_READ_DUMMY;
-   ecat_write_raw (lan9252, data, sizeof(data));
-
    /* Continue reading until we have read len */
-   while(len > 0)	//Pending this part could be DMA
-   {
-      temp_len = (len > 4) ? 4: len;
-      /* Always read 4 byte */
-      ecat_read_raw (lan9252, (temp_buf + byte_offset), sizeof(uint32_t));
+    if (len > 0){
 
-      fifo_cnt--;
-      len -= temp_len;
-      byte_offset += temp_len;
-   }
-   /* Un-select device. */
-   //spi_unselect (lan9252);
+        quotient = len/4;
+        remainder = len%4;
+        
+        if (remainder == 0)
+            array_size = quotient;
+        else
+            array_size = quotient+1;            
+
+        size = 4*array_size;        
+
+        buffer = (uint8_t *)malloc(size);
+        buffer[0] = size;
+        memset(buffer,0,size);    
+
+        lseek (lan9252, ESC_PRAM_RD_FIFO_REG, SEEK_SET);        
+        n = read (lan9252, buffer, size);
+        (void)n;
+                   
+        while(len > 0)
+        {
+        
+            for (i=0; i<size; i=i+4) {
+                temp_len = (len > 4) ? 4: len;
+
+                temp = buffer[i] | (buffer[i+1] << 8) | (buffer[i+2] << 16) | (buffer[i+3] << 24);
+                memcpy(temp_buf + byte_offset ,&temp, temp_len);
+                fifo_cnt--;
+                len -= temp_len;
+                byte_offset += temp_len;
+            }
+        }
+        free(buffer);
+    }
 }
 
 /* ESC write process data ram function */
@@ -163,7 +222,11 @@ static void ESC_write_pram (uint16_t address, void *buf, uint16_t len)
    uint32_t value;
    uint8_t * temp_buf = buf;
    uint16_t byte_offset = 0;
-   uint8_t fifo_cnt, first_byte_position, temp_len, data[3];
+   uint8_t fifo_cnt, first_byte_position, temp_len;
+   uint8_t *buffer;
+   int i, array_size, size;
+   float quotient,remainder;   
+   int n;
 
    value = ESC_PRAM_CMD_ABORT;
    lan9252_write_32(ESC_PRAM_WR_CMD_REG, value);
@@ -202,33 +265,49 @@ static void ESC_write_pram (uint16_t address, void *buf, uint16_t len)
    byte_offset += temp_len;
    fifo_cnt--;
 
-   /* Select device. */
-   spi_select (lan9252);
-   /* Send command and address for incrementing write */
-   data[0] = ESC_CMD_SERIAL_WRITE;
-   data[1] = ((ESC_PRAM_WR_FIFO_REG >> 8) & 0xFF);
-   data[2] = (ESC_PRAM_WR_FIFO_REG & 0xFF);
-   ecat_write_raw (lan9252, data, sizeof(data));
+    if (len > 0){
 
-   /* Continue reading until we have read len */
-   while(len > 0)
-   {
-      temp_len = (len > 4) ? 4 : len;
-      value = 0;
-      memcpy((uint8_t *)&value, (temp_buf + byte_offset), temp_len);
-      /* Always write 4 byte */
-      ecat_write_raw (lan9252, (void *)&value, sizeof(value));
+        quotient = len/4;
+        remainder = len%4;
+        
+        if (remainder == 0)
+            array_size = quotient;
+        else
+            array_size = quotient+1;            
 
-      fifo_cnt--;
-      len -= temp_len;
-      byte_offset += temp_len;
-   }
-   /* Un-select device. */
-   spi_unselect (lan9252);
+        size = 3+4*array_size;        
+
+        buffer = (uint8_t *)malloc(size);
+        buffer[0] = size;
+        memset(buffer,0,size);
+        
+        buffer[0] = ESC_CMD_SERIAL_WRITE;
+        buffer[1] = ((ESC_PRAM_WR_FIFO_REG >> 8) & 0xFF);
+        buffer[2] = (ESC_PRAM_WR_FIFO_REG & 0xFF); 
+        while(len > 0)
+        {                        
+            for (i=3; i<size; i=i+4) {           
+                temp_len = (len > 4) ? 4 : len;
+
+                memcpy((uint8_t *)&value, (temp_buf + byte_offset), temp_len);
+                buffer[i] = (value & 0xFF);
+                buffer[i+1] = ((value >> 8) & 0xFF);
+                buffer[i+2] = ((value >> 16) & 0xFF);
+                buffer[i+3] = ((value >> 24) & 0xFF);                              
+
+                fifo_cnt--;
+                len -= temp_len;
+                byte_offset += temp_len;               
+            }
+        }        
+        n = write (lan9252, buffer, size);
+        (void)n;
+        free(buffer);    
+    }
 }
 
 
-/** ESC read functi+on used by the Slave stack.
+/** ESC read function used by the Slave stack.
  *
  * @param[in]   address     = address of ESC register to read
  * @param[out]  buf         = pointer to buffer to read in
@@ -363,11 +442,4 @@ void ESC_init (const esc_cfg_t * config)
 
 
 
-}
-
-int open(const char *pathname, int flags, uint8_t mode) {
-	if((*pathname) == "LOCAL_SPI" && flags == O_RDWR && mode == 0)
-	return STM32_SPI;
-	else
-	return -1;
 }

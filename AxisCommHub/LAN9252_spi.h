@@ -65,13 +65,12 @@ extern SPI_HandleTypeDef hspi4;
 void lan9252_write_32 (uint16_t address, uint32_t val);
 uint32_t lan9252_read_32 (uint32_t address);
 void ecat_write_raw(uint8_t lan9252_port, uint8_t * txdata_array, size_t size);
-void ecat_read_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata_array);
+void ecat_read_raw(uint8_t lan9252_port, uint8_t * rxdata_array, uint16_t Size);
 //	currently testing
 void ESC_init_mod (void);
 
 /**************Defined for this application****************/
 void ecat_write_raw(uint8_t lan9252_port, uint8_t * txdata_array, size_t size);
-void ecat_read_raw(uint8_t lan9252_port, uint8_t * txdata_array,uint8_t * rxdata_array);
 int8_t ecat_SPIConfig(SPI_HandleTypeDef* handlerPtr);
 void ecat_deinit(SPI_HandleTypeDef* handlePtr);
 
