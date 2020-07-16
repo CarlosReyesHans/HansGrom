@@ -55,6 +55,7 @@ osThreadId_t eventHTHandle;
 //	Task handlers for auxiliar tasks
 osThreadId_t uartPrintTHandler;
 osThreadId_t ecatTestTHandler;
+osThreadId_t ecatSOESTHandler;
 osThreadId_t taskManagerTHandler;
 osThreadId_t eventTesterTHandler;
 
@@ -118,9 +119,10 @@ uint8_t tsens_updtBuffer2publish(int8_t* buffer2write);
 
 
 
-/*------------------------------------------------ ECAT functions ---------------------------------------------------------------------*/
-
-
+/*------------------------------------------------ ECAT/SOES functions ---------------------------------------------------------------------*/
+void soes (void *arg);	//<< Defined in sampleApp.c
+void post_object_download_hook (uint16_t index, uint8_t subindex, uint16_t flags); //<< Defined in sampleApp.c
+void post_state_change_hook (uint16_t* as, uint16_t*an); //<< Defined in sampleApp.c
 
 
 

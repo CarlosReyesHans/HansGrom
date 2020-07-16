@@ -45,8 +45,6 @@ _SMmap SMmap3[];
 
 
 
-
-
 void cb_get_inputs (void)
 {
    //Rb.button = gpio_get(GPIO_BUTTON_SW1);
@@ -138,7 +136,7 @@ void soes (void * arg)
    };
 
    ecat_slv_init (&config);
-
+   // PENDING Here could come a osThreadYield() or osEventsWait(Any flag comming from SMs)
    while (1)
    {
       ecat_slv();
@@ -146,31 +144,31 @@ void soes (void * arg)
 }
 
 uint8_t load1s, load5s, load10s;
-void my_cyclic_callback (void * arg)
-{
-   while (1)
-   {
-      task_delay(tick_from_ms (20000));
-      stats_get_load (&load1s, &load5s, &load10s);
-      DPRINT ("%d:%d:%d (1s:5s:10s)\n",
-               load1s, load5s, load10s);
-      DPRINT ("Local bootstate: %d App.state: %d\n", local_boot_state,App.state);
-      DPRINT ("AlStatus : 0x%x, AlError : 0x%x, Watchdog : %d \n", (ESCvar.ALstatus & 0x001f),ESCvar.ALerror,wd_cnt);
-
-   }
-}
-
-int main (void)
-{
-   extern void led_run (void *arg);
-   extern void led_error (void *arg);
-   extern void soes (void *arg);
-   extern void my_cyclic_callback (void * arg);
-
-   /* task_spawn ("led_run", led_run, 15, 512, NULL); */
-   task_spawn ("led_error", led_error, 15, 512, NULL);
-   task_spawn ("t_StatsPrint", my_cyclic_callback, 20, 1024, (void *)NULL);
-   task_spawn ("soes", soes, 8, 1024, NULL);
-
-   return (0);
-}
+//void my_cyclic_callback (void * arg)
+//{
+//   while (1)
+//   {
+//      task_delay(tick_from_ms (20000));
+//      stats_get_load (&load1s, &load5s, &load10s);
+//      DPRINT ("%d:%d:%d (1s:5s:10s)\n",
+//               load1s, load5s, load10s);
+//      DPRINT ("Local bootstate: %d App.state: %d\n", local_boot_state,App.state);
+//      DPRINT ("AlStatus : 0x%x, AlError : 0x%x, Watchdog : %d \n", (ESCvar.ALstatus & 0x001f),ESCvar.ALerror,wd_cnt);
+//
+//   }
+//}
+//
+//int main (void)
+//{
+//   extern void led_run (void *arg);
+//   extern void led_error (void *arg);
+//   extern void soes (void *arg);
+//   extern void my_cyclic_callback (void * arg);
+//
+//   /* task_spawn ("led_run", led_run, 15, 512, NULL); */
+//   task_spawn ("led_error", led_error, 15, 512, NULL);
+//   task_spawn ("t_StatsPrint", my_cyclic_callback, 20, 1024, (void *)NULL);
+//   task_spawn ("soes", soes, 8, 1024, NULL);
+//
+//   return (0);
+//}

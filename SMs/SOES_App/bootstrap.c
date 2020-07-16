@@ -3,9 +3,9 @@
  * LICENSE file in the project root for full license information
  */
 
-#include <kern.h>
-#include <bsp.h>
-#include <flash_drv.h>
+//#include <kern.h>
+//#include <bsp.h>
+//#include <flash_drv.h>	//TODO
 
 #include <esc_foe.h>
 #include "bootstrap.h"
@@ -15,7 +15,6 @@ static uint32_t boot_started     = 0;
 static uint32_t boot_watch_dog   = 0;
 static uint32_t boot_time_ms     = BOOT_WATCHDOG_MS;
 static uint32_t current_tick_ms;
-
 /* Dummy values pointing to a flash writing area when updating Firmware */
 #define FLASH_BLOCK_SIZE      256 * 1024
 #define FLASH_SECTOR_SIZE     2048

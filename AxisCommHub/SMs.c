@@ -79,7 +79,7 @@ const osThreadAttr_t uartPrintT_Attributes = {
 		.priority = (osPriority_t) osPriorityBelowNormal,
 };
 
-
+/*-------------------------ECAT--------------------------------------*/
 uint32_t ecatTestTBuffer[ 128 ];
 StaticTask_t ecatTestTControlBlock;
 const osThreadAttr_t ecatTestT_Attributes = {
@@ -90,6 +90,19 @@ const osThreadAttr_t ecatTestT_Attributes = {
 		.cb_size = sizeof(ecatTestTControlBlock),
 		.priority = (osPriority_t) osPriorityHigh1,
 };
+
+uint32_t ecatSOESTBuffer[1024];
+StaticTask_t ecatSOESTControlBlock;
+const osThreadAttr_t ecatSOEST_Attrbuttes = {
+		.name = "ecatSOEST",
+		.stack_mem = ecatSOESTBuffer,
+		.stack_size = sizeof(ecatSOESTBuffer),
+		.cb_mem = ecatSOESTControlBlock,
+		.cb_size = sizeof(ecatSOESTControlBlock),
+		.priority = (osPriority_t) osPriorityHigh1,
+};
+
+/*----------------------System Monitor--------------------------------*/
 
 
 uint32_t taskManagerTBuffer[ 128 ];
@@ -164,7 +177,7 @@ volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by 
 osStatus_t static ecatStatus,uartPrintStatus;
 
 /*************************************** Var task manager ***********************************************************/
-static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT, status_taskMT;
+static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT, status_taskMT,status_ecatSOEST;
 osTimerId_t timerTsens;	//IMPRVME	This may be a local variable to save memory
 static uint8_t timedoutTsens;
 
@@ -289,6 +302,7 @@ void taskManger(void * argument) {
 	while (1) {
 		status_ecatTestT = osThreadGetState(ecatTestTHandler);
 		status_ecatT = osThreadGetState(ecatSMTHandle);
+		status_ecatSOEST = osThreadGetState(ecatSOESTHandler)
 		status_evHT = osThreadGetState(eventHTHandle);
 		status_uartPT = osThreadGetState(uartPrintTHandler);
 		status_tSensT = osThreadGetState(tempSensTHandle);
@@ -446,7 +460,9 @@ void addThreads(void) {
 	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
 	//	Auxiliar tasks
 	ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
+	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
 	uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
+	osThreadSuspend(ecatSOESTHandler);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
 	//ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);	//Only for raw tests with the SPI
