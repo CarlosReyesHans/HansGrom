@@ -11,6 +11,7 @@
 #include "cmsis_os.h"
 #include "main.h"
 #include "AxisCommHub_definitions.h"
+#include "esc_hw.h"
 
 
 #define TEST_BYTE_OFFSET	0x064u
@@ -68,6 +69,8 @@ void ecat_write_raw(uint8_t lan9252_port, uint8_t * txdata_array, size_t size);
 void ecat_read_raw(uint8_t lan9252_port, uint8_t * rxdata_array, uint16_t Size);
 //	currently testing
 void ESC_init_mod (void);
+void spi_select(int local_spi);
+void spi_unselect(int local_spi);
 
 /**************Defined for this application****************/
 void ecat_write_raw(uint8_t lan9252_port, uint8_t * txdata_array, size_t size);

@@ -12,8 +12,12 @@
 #define BOOT_SWAP                3
 #define BOOT_RESET               4
 #define BOOT_FAILED              99
-
 #define BOOT_WATCHDOG_MS         20 * 1000
+
+//Modified for testing without FoE @ 2020.07.17
+#define FLASH_WRITE_BLOCK_SIZE 		32
+#define FTFL_USER_MARGIN			0x00
+#define NUM_OF_FILES				2u
 
 void bootstrap_foe_init (void);
 void bootstrap_state (void);

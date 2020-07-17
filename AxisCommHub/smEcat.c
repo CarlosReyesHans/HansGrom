@@ -130,7 +130,8 @@ void ecat_SM (void * argument) {
 				notifyEvent(EV_ECAT_READY);
 				//exit
 				ecat_step = ec_transmitting;
-				osThreadResume(ecatTestTHandler);
+				//osThreadResume(ecatTestTHandler);
+				osThreadResume(ecatSOESTHandler);
 				break;
 			case	ec_transmitting:
 				osEventFlagsWait(evt_sysSignals, ECAT_EVENT, osFlagsWaitAll, osWaitForever);

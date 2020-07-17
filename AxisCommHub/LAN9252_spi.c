@@ -62,17 +62,21 @@ void lan9252_write_32 (uint16_t address, uint32_t val)
     data[0] = ESC_CMD_SERIAL_WRITE;
     data[1] = ((address >> 8) & 0xFF);
     data[2] = (address & 0xFF);
-    data[3] = (val & 0xFF);
-    data[4] = ((val >> 8) & 0xFF);
-    data[5] = ((val >> 16) & 0xFF);
-    data[6] = ((val >> 24) & 0xFF);
+//    data[3] = (val & 0xFF);
+//    data[4] = ((val >> 8) & 0xFF);
+//    data[5] = ((val >> 16) & 0xFF);
+//    data[6] = ((val >> 24) & 0xFF);
+    data[6] = (val & 0xFF);
+    data[5] = ((val >> 8) & 0xFF);
+    data[4] = ((val >> 16) & 0xFF);
+    data[3] = ((val >> 24) & 0xFF);
 
     /* Select device. */
-    //spi_select (lan9252);
+    spi_select (lan9252);
     /* Write data */
     ecat_write_raw (LAN9252_PORT1, data, sizeof(data));
     /* Un-select device. */
-    //spi_unselect (lan9252);
+    spi_unselect (lan9252);
 }
 
 /* lan9252 single read */
@@ -87,7 +91,7 @@ uint32_t lan9252_read_32 (uint32_t address)
    data[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
 
    /* Select device. */
-   //spi_select (lan9252);
+   spi_select (lan9252);
    /* Read data */
 //   write (lan9252, data, sizeof(data));
 //   read (lan9252, result, sizeof(result));
@@ -95,12 +99,13 @@ uint32_t lan9252_read_32 (uint32_t address)
    ecat_read_raw(LAN9252_PORT1, result, sizeof(result));
    //ecat_txread_raw(LAN9252_PORT1,data,result);
    /* Un-select device. */
-   //spi_unselect (lan9252);
+   spi_unselect (lan9252);
 
    return ((result[3] << 24) |
            (result[2] << 16) |
            (result[1] << 8) |
             result[0]);
+
 }
 
 
@@ -191,9 +196,20 @@ void ESC_init_mod (void)//(const esc_cfg_t * config)
 
 }
 
+void spi_select(int local_spi) {
+	if(local_spi == STM32_SPI) {
+		HAL_SPI_Init(spi_LAN9252);
+	}
+}
+void spi_unselect(int local_spi) {
+	if(local_spi == STM32_SPI) {
+		HAL_SPI_DeInit(spi_LAN9252);
+	}
+}
+
 
 /* *
- * @brief	Configure the SPI for ECAT Communication
+ * @brief	Configure the SPI for ECAT Communication by initializing the library pointer
  * @retval	-1 if fails, 1 otherwise
  * */
 
@@ -209,7 +225,7 @@ int8_t ecat_SPIConfig(SPI_HandleTypeDef* handlerPtr){
 }
 
 /* *
- * @brief	De initialize the SPI
+ * @brief	De initialize the SPI and resets the library spiHandler
  * @param	The appropiate SPI Handler
  * */
 

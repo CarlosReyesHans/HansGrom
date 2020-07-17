@@ -16,9 +16,13 @@
 #define	LOCAL_SPI		0x01
 #define	STM32_SPI		10		//	Random number port starting from 10d
 
+static int lan9252 = -1;
+
+
 void ESC_read (uint16_t address, void *buf, uint16_t len);
 void ESC_read_pram (uint16_t address, void *buf, uint16_t len);
 void ESC_read_csr (uint16_t address, void *buf, uint16_t len);
+
 
 /*
  *	@brief	this function partially emulates the overall function of the linux open() function, only minimal features defined inside

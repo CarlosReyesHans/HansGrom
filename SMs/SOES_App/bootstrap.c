@@ -117,7 +117,7 @@ void bootstrap_foe_init  (void)
    {
       .buffer_size = FLASH_WRITE_BLOCK_SIZE,  /* Buffer size before we flush to destination */
       .fbuffer     = (uint8_t *)&fbuf,
-      .n_files     = NELEMENTS (files),
+      .n_files     = NUM_OF_FILES,//NELEMENTS (files),
       .files       = files
    };
 
@@ -132,7 +132,7 @@ void bootstrap_state (void)
       case BOOT_START:
       {
          local_boot_state = BOOT_UPDATING;
-         boot_started = tick_to_ms (tick_get ());
+         //boot_started = tick_to_ms (tick_get ());
          boot_watch_dog = boot_started + boot_time_ms;
          DPRINT ("boot_started: %d, boot_watch_dog: %d\n",boot_started,boot_watch_dog);
          break;

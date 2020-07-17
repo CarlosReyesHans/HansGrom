@@ -3,7 +3,7 @@
 
 #include "cc.h"
 
-#define USE_FOE          1
+#define USE_FOE          0
 #define USE_EOE          0
 
 #define MBXSIZE          128
@@ -40,5 +40,7 @@
 
 #define MAX_MAPPINGS_SM2 1
 #define MAX_MAPPINGS_SM3 2
+
+
 
 #endif /* __ECAT_OPTIONS_H__ */

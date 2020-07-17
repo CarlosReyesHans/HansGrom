@@ -97,7 +97,7 @@ const osThreadAttr_t ecatSOEST_Attrbuttes = {
 		.name = "ecatSOEST",
 		.stack_mem = ecatSOESTBuffer,
 		.stack_size = sizeof(ecatSOESTBuffer),
-		.cb_mem = ecatSOESTControlBlock,
+		.cb_mem = &ecatSOESTControlBlock,
 		.cb_size = sizeof(ecatSOESTControlBlock),
 		.priority = (osPriority_t) osPriorityHigh1,
 };
@@ -302,7 +302,7 @@ void taskManger(void * argument) {
 	while (1) {
 		status_ecatTestT = osThreadGetState(ecatTestTHandler);
 		status_ecatT = osThreadGetState(ecatSMTHandle);
-		status_ecatSOEST = osThreadGetState(ecatSOESTHandler)
+		status_ecatSOEST = osThreadGetState(ecatSOESTHandler);
 		status_evHT = osThreadGetState(eventHTHandle);
 		status_uartPT = osThreadGetState(uartPrintTHandler);
 		status_tSensT = osThreadGetState(tempSensTHandle);
@@ -462,7 +462,7 @@ void addThreads(void) {
 	ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
 	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
 	uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
-	osThreadSuspend(ecatSOESTHandler);
+	ecatStatus = osThreadSuspend(ecatSOESTHandler);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
 	//ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);	//Only for raw tests with the SPI

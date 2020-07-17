@@ -5,7 +5,7 @@
 
 #ifndef __options__
 #define __options__
-
+#pragma once
 /* User-defined options, Options defined here will override default values */
 #include "ecat_options.h"
 
