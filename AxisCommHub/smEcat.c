@@ -26,6 +26,8 @@ extern uint8_t MBX[];
 extern _SMmap SMmap2[];
 extern _SMmap SMmap3[];
 
+extern int lan9252; //From lan9252_spi.c
+
 
 /*
  * @brief Sate Machine for overall task of eCAT interface
@@ -65,7 +67,12 @@ void ecat_SM (void * argument) {
 				break;
 
 			case	ec_checkConnection:
-				rcvdData = lan9252_read_32(TEST_BYTE_OFFSET);	//This function sends out command to receive TEST BYTE with DMA
+				lan9252 = open ("LOCAL_SPI", O_RDWR, 0);
+				rcvdData = lan9252_read_32(TEST_BYTE_OFFSET);
+
+
+
+					//This function sends out command to receive TEST BYTE with DMA
 //				timerStatus = osTimerStart(timeoutEcat,(uint32_t)2000U);
 //				if (timerStatus != osOK) {
 //					__NOP();	//Handle this error during start of timer
@@ -75,16 +82,29 @@ void ecat_SM (void * argument) {
 				if (rcvdData == TEST_RESPONSE) {
 					rcvdData = 0x00;
 					ESC_init_mod();
-
+					uint32_t temp4bytes;
 				   /*  wait until ESC is started up */	//This should be deleted afterwards, since it is only temporary while testing ecat_slv.c
-				   while ((rcvdData & 0x0001) == 0)
-				   {
-					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
-								sizeof (ESC_status));
-					  ESC_status = etohs (ESC_status);
-					  rcvdData = ESC_status;
-				   }
-
+//				   while ((rcvdData & 0x0001) == 0)
+//				   {
+//					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
+//								sizeof (ESC_status));
+//					  ESC_status = etohs (ESC_status);
+//					  rcvdData = ESC_status;
+//
+//					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &temp4bytes,
+//					  								sizeof (temp4bytes));
+//					  temp4bytes = etohs (temp4bytes);
+//
+//
+//					  ESC_read (ESC_CSR_REV_8REG, (void *) &temp4bytes,
+//													sizeof (temp4bytes));
+//					  temp4bytes = etohs (ESC_status);
+//
+//
+//					  temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
+//
+//				   }
+					temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
 					ecat_step = ec_idle;
 
 				}

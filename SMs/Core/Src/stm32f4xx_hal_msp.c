@@ -112,10 +112,17 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     PE5     ------> SPI4_MISO
     PE6     ------> SPI4_MOSI 
     */
-    GPIO_InitStruct.Pin = ECAT_SCK_Pin|ECAT_SCS_Pin|ECAT_MISO_Pin|ECAT_MOSI_Pin;
+    GPIO_InitStruct.Pin = ECAT_SCK_Pin|ECAT_MISO_Pin|ECAT_MOSI_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI4;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI4;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
@@ -188,7 +195,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
     PE5     ------> SPI4_MISO
     PE6     ------> SPI4_MOSI 
     */
-    HAL_GPIO_DeInit(GPIOE, ECAT_SCK_Pin|ECAT_SCS_Pin|ECAT_MISO_Pin|ECAT_MOSI_Pin);
+    HAL_GPIO_DeInit(GPIOE, ECAT_SCK_Pin|GPIO_PIN_4|ECAT_MISO_Pin|ECAT_MOSI_Pin);
 
     /* SPI4 DMA DeInit */
     HAL_DMA_DeInit(hspi->hdmarx);

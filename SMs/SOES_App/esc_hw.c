@@ -42,6 +42,9 @@
 #define ESC_PRAM_SIZE(x)         ((x) << 16)
 #define ESC_PRAM_ADDR(x)         ((x) << 0)
 
+
+
+
 #define ESC_CSR_DATA_REG         0x300
 #define ESC_CSR_CMD_REG          0x304
 
@@ -54,7 +57,8 @@
 #define ESC_RESET_CTRL_RST       BIT(6)
 
 
-
+/******************EXTERN********************************/
+extern int lan9252; //From lan9252_spi.c
 
 
 /* ESC read CSR function */
@@ -71,10 +75,10 @@ void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
 		  value = lan9252_read_32(ESC_CSR_CMD_REG);
 		  counter++;
 
-	   } while((value & ESC_CSR_CMD_BUSY) && counter < 100 && address == ESCREG_ALSTATUS);
+	   } while((value & ESC_CSR_CMD_BUSY) && counter < 100 );
 	   counter = 0;
 	   //spi_unselect (lan9252);
-   } while(address == ESCREG_ALSTATUS);
+   } while(value & ESC_CSR_CMD_BUSY);	// This resends the read command after 100 attempts
    //spi_select (lan9252);
    value = lan9252_read_32(ESC_CSR_DATA_REG);
    memcpy(buf, (uint8_t *)&value, len);
@@ -87,7 +91,7 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
    uint16_t counter = 0;
 
    memcpy((uint8_t*)&value, buf,len);
-   do {
+
 
 
    lan9252_write_32(ESC_CSR_DATA_REG, value);
@@ -98,9 +102,9 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
    {
       value = lan9252_read_32(ESC_CSR_CMD_REG);
       counter++;
-   } while((value & ESC_CSR_CMD_BUSY) && counter<100 && address == ESCREG_ALSTATUS);
+   } while((value & ESC_CSR_CMD_BUSY) && counter<100 );
    counter = 0;
-   } while((value & ESC_CSR_CMD_BUSY) && address == ESCREG_ALSTATUS);
+
 
 }
 

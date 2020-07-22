@@ -66,8 +66,6 @@ void Error_Handler(void);
 #define PRESCALER_2 2-1
 #define ECAT_SCK_Pin GPIO_PIN_2
 #define ECAT_SCK_GPIO_Port GPIOE
-#define ECAT_SCS_Pin GPIO_PIN_4
-#define ECAT_SCS_GPIO_Port GPIOE
 #define ECAT_MISO_Pin GPIO_PIN_5
 #define ECAT_MISO_GPIO_Port GPIOE
 #define ECAT_MOSI_Pin GPIO_PIN_6
