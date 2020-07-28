@@ -47,16 +47,6 @@
 #define ESC_PRAM_SIZE(x)         ((x) << 16)
 #define ESC_PRAM_ADDR(x)         ((x) << 0)
 
-//Added by JC
-#define SYS_CHIP_ID_REV			0x050u
-#define SYS_FR_CNT				0x09cu
-
-
-#define ESC_CSR_TYPE_8REG		0x00
-#define ESC_CSR_REV_8REG		0x01
-#define ESC_CSR_BUILD_8REG		0x04
-#define ESC_CSR_AL_EVENT_MASK	0x204
-
 #define ESC_CSR_DATA_REG         0x300
 #define ESC_CSR_CMD_REG          0x304
 
@@ -89,13 +79,6 @@ void ecat_deinit(SPI_HandleTypeDef* handlePtr);
 
 /*******************Auxiliar functions to test****************************/
 void ecatInitFunc(void * argument);
-
-uint32_t lan9252_read_32_nodma (uint32_t address);
-
-void ecat_write_raw_nodma(uint8_t lan9252_port, uint8_t * txdata_array, size_t size);
-
-void ecat_read_raw_nodma(uint8_t lan9252_port, uint8_t * rxdata_array,uint16_t Size);
-
 
 
 #endif /* LAN9252_SPI_TEMP_H_ */

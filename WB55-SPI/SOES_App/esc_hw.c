@@ -42,9 +42,6 @@
 #define ESC_PRAM_SIZE(x)         ((x) << 16)
 #define ESC_PRAM_ADDR(x)         ((x) << 0)
 
-
-
-
 #define ESC_CSR_DATA_REG         0x300
 #define ESC_CSR_CMD_REG          0x304
 
@@ -57,82 +54,29 @@
 #define ESC_RESET_CTRL_RST       BIT(6)
 
 
-/******************EXTERN********************************/
-extern int lan9252; //From lan9252_spi.c
 
-uint32_t invert32data(uint32_t data) {
-	return data<<31&(1<<31)|
-			data<<30&(1<<30)|
-			data<<29&(1<<29)|
-			data<<28&(1<<28)|
-			data<<27&(1<<27)|
-			data<<26&(1<<26)|
-			data<<25&(1<<25)|
-			data<<24&(1<<24)|
-			data<<23&(1<<23)|
-			data<<22&(1<<22)|
-			data<<21&(1<<21)|
-			data<<20&(1<<20)|
-			data<<19&(1<<19)|
-			data<<18&(1<<18)|
-			data<<17&(1<<17)|
-			data<<16&(1<<16)|
-			data<<15&(1<<15)|
-			data<<14&(1<<14)|
-			data<<13&(1<<13)|
-			data<<12&(1<<12)|
-			data<<11&(1<<11)|
-			data<<10&(1<<10)|
-			data<<9&(1<<9)|
-			data<<8&(1<<8)|
-			data<<7&(1<<7)|
-			data<<6&(1<<6)|
-			data<<5&(1<<5)|
-			data<<4&(1<<4)|
-			data<<3&(1<<3)|
-			data<<2&(1<<2)|
-			data<<1&(1<<1)|
-			data&(1);
-}
 
-uint16_t invert16data(uint16_t data) {
-	return 	data<<15&(1<<15)|
-			data<<14&(1<<14)|
-			data<<13&(1<<13)|
-			data<<12&(1<<12)|
-			data<<11&(1<<11)|
-			data<<10&(1<<10)|
-			data<<9&(1<<9)|
-			data<<8&(1<<8)|
-			data<<7&(1<<7)|
-			data<<6&(1<<6)|
-			data<<5&(1<<5)|
-			data<<4&(1<<4)|
-			data<<3&(1<<3)|
-			data<<2&(1<<2)|
-			data<<1&(1<<1)|
-			data&(1);
-}
 
 /* ESC read CSR function */
 void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
 {
 	uint16_t counter = 0;
    uint32_t value;
-   uint32_t value2;
+   do {
+	   //spi_select (lan9252);
+	   value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | address);
+	   lan9252_write_32(ESC_CSR_CMD_REG, value);
+	   do
+	   {
+		  value = lan9252_read_32(ESC_CSR_CMD_REG);
+		  counter++;
 
-   value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | (address<<2));//
+	   } while((value & ESC_CSR_CMD_BUSY) && counter < 100 && address == ESCREG_ALSTATUS);
+	   counter = 0;
+	   //spi_unselect (lan9252);
+   } while(address == ESCREG_ALSTATUS);
    //spi_select (lan9252);
-   lan9252_write_32(ESC_CSR_CMD_REG, value);
-   do
-   {
-	  value = lan9252_read_32(ESC_CSR_CMD_REG);
-
-   } while(value & ESC_CSR_CMD_BUSY );
-
-
    value = lan9252_read_32(ESC_CSR_DATA_REG);
-   ////spi_unselect (lan9252);
    memcpy(buf, (uint8_t *)&value, len);
 }
 
@@ -143,7 +87,7 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
    uint16_t counter = 0;
 
    memcpy((uint8_t*)&value, buf,len);
-
+   do {
 
 
    lan9252_write_32(ESC_CSR_DATA_REG, value);
@@ -154,9 +98,9 @@ static void ESC_write_csr (uint16_t address, void *buf, uint16_t len)
    {
       value = lan9252_read_32(ESC_CSR_CMD_REG);
       counter++;
-   } while((value & ESC_CSR_CMD_BUSY) && counter<100 );
+   } while((value & ESC_CSR_CMD_BUSY) && counter<100 && address == ESCREG_ALSTATUS);
    counter = 0;
-
+   } while((value & ESC_CSR_CMD_BUSY) && address == ESCREG_ALSTATUS);
 
 }
 

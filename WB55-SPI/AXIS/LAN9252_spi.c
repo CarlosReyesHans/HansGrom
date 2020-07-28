@@ -26,8 +26,6 @@ static uint8_t tempSpiRxBuffer[8];
 static volatile uint8_t sendFlag;
 SPI_HandleTypeDef *spi_LAN9252;
 volatile uint8_t ecatDMArcvd, ecatDMAsent, ecatDMAonlyRcvd;	//Used in external SMs
-int lan9252 = -1;
-
 //External variables
 
 
@@ -62,58 +60,53 @@ void lan9252_write_32 (uint16_t address, uint32_t val)
     uint8_t data[7];
 
     data[0] = ESC_CMD_SERIAL_WRITE;
-    data[1] = ((address >> 8) & 0xFF);//|ESC_CMD_ADDR_INC;
+    data[1] = ((address >> 8) & 0xFF);
     data[2] = (address & 0xFF);
-    data[3] = (val & 0xFF);					//Sends val little Endian
-    data[4] = ((val >> 8) & 0xFF);
-    data[5] = ((val >> 16) & 0xFF);
-    data[6] = ((val >> 24) & 0xFF);
-//    data[6] = (val & 0xFF);				//Send val Big Endian
-//    data[5] = ((val >> 8) & 0xFF);
-//    data[4] = ((val >> 16) & 0xFF);
-//    data[3] = ((val >> 24) & 0xFF);
+//    data[3] = (val & 0xFF);
+//    data[4] = ((val >> 8) & 0xFF);
+//    data[5] = ((val >> 16) & 0xFF);
+//    data[6] = ((val >> 24) & 0xFF);
+    data[6] = (val & 0xFF);
+    data[5] = ((val >> 8) & 0xFF);
+    data[4] = ((val >> 16) & 0xFF);
+    data[3] = ((val >> 24) & 0xFF);
 
     /* Select device. */
     spi_select (lan9252);
     /* Write data */
-    ecat_write_raw_nodma(LAN9252_PORT1, data, sizeof(data));
+    ecat_write_raw (LAN9252_PORT1, data, sizeof(data));
     /* Un-select device. */
     spi_unselect (lan9252);
 }
 
 /* lan9252 single read */
-//uint32_t lan9252_read_32 (uint32_t address)
-//{
-//   uint8_t data[4];
-//   uint8_t dataDummy[4];
-//   uint8_t result[4];
-//
-//   data[0] = ESC_CMD_FAST_READ;
-//   data[1] = ((address >> 8) & 0xFF);
-//   data[2] = (address & 0xFF);
-//   data[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
-//
-//
-//
-//
-//   /* Select device. */
-//   spi_select (lan9252);
-//   /* Read data */
-////   write (lan9252, data, sizeof(data));
-////   read (lan9252, result, sizeof(result));
-//   ecat_write_raw_nodma(LAN9252_PORT1, data, sizeof(data));
-//   ecat_read_raw_nodma(LAN9252_PORT1, result, sizeof(result));
-//
-//   //ecat_txread_raw(LAN9252_PORT1,data,result);
-//   /* Un-select device. */
-//   spi_unselect (lan9252);
-//
-//   return ((result[3] << 24) |
-//           (result[2] << 16) |
-//           (result[1] << 8) |
-//            result[0]);
-//
-//}
+uint32_t lan9252_read_32 (uint32_t address)
+{
+   uint8_t data[4];
+   uint8_t result[4];
+
+   data[0] = ESC_CMD_FAST_READ;
+   data[1] = ((address >> 8) & 0xFF);
+   data[2] = (address & 0xFF);
+   data[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
+
+   /* Select device. */
+   spi_select (lan9252);
+   /* Read data */
+//   write (lan9252, data, sizeof(data));
+//   read (lan9252, result, sizeof(result));
+   ecat_write_raw(LAN9252_PORT1, data, sizeof(data));
+   ecat_read_raw(LAN9252_PORT1, result, sizeof(result));
+   //ecat_txread_raw(LAN9252_PORT1,data,result);
+   /* Un-select device. */
+   spi_unselect (lan9252);
+
+   return ((result[3] << 24) |
+           (result[2] << 16) |
+           (result[1] << 8) |
+            result[0]);
+
+}
 
 
 /* *
@@ -187,42 +180,29 @@ void ecat_read_raw(uint8_t lan9252_port, uint8_t * rxdata_array,uint16_t Size) {
 void ESC_init_mod (void)//(const esc_cfg_t * config)
 {
    uint32_t value;
-   uint32_t temp,temp4bytes;
    //const char * spi_name = (char *)config->user_arg;
    //lan9252 = open (spi_name, O_RDWR, 0);
 
    /* Reset the ecat core here due to evb-lan9252-digio not having any GPIO
     * for that purpose.
     */
-   value = lan9252_read_32(ESC_CSR_CMD_REG);
-   temp = lan9252_read_32(SYS_FR_CNT);
    lan9252_write_32(ESC_RESET_CTRL_REG,ESC_RESET_CTRL_RST);
    do
    {
       value = lan9252_read_32(ESC_CSR_CMD_REG);
-      //lan9252_write_32(ESC_RESET_CTRL_REG,ESC_RESET_CTRL_RST);
    } while(value & ESC_RESET_CTRL_RST);
-   value = 0;
-   while(value < 100) {
-	   temp4bytes = lan9252_read_32(SYS_FR_CNT);
-	   value++;		//TODO these lines only test the free run counter access
-   }
 
-   value = 0;
 
 
 }
 
 void spi_select(int local_spi) {
 	if(local_spi == STM32_SPI) {
-		//HAL_GPIO_WritePin(SELECT_GPIO_Port, SELECT_Pin, 0);
 		HAL_SPI_Init(spi_LAN9252);
 	}
 }
-
 void spi_unselect(int local_spi) {
 	if(local_spi == STM32_SPI) {
-		//HAL_GPIO_WritePin(SELECT_GPIO_Port, SELECT_Pin, 1);
 		HAL_SPI_DeInit(spi_LAN9252);
 	}
 }
@@ -360,79 +340,4 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
 
 void ecatITCallback(void) {
 	//HAL_GPIO_WritePin(ECAT_SCS_GPIO_Port, ECAT_SCS_Pin, 1); //Deactivates the SPI Device
-}
-
-
-// SPI TESTS
-
-/* lan9252 single read with NO DMA, @2020.07.22 was updated from */
-
-uint32_t lan9252_read_32 (uint32_t address)
-{
-   uint8_t data[4],dataDummy[4];
-   uint8_t result[4];
-
-   data[0] = ESC_CMD_FAST_READ;
-   data[1] = ((address >> 8) & 0xFF);
-   data[2] = (address & 0xFF);
-   data[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
-
-   dataDummy[0] = DUMMY_BYTE;
-   dataDummy[1] = DUMMY_BYTE;
-   dataDummy[2] = DUMMY_BYTE;
-   dataDummy[3] = DUMMY_BYTE;//ESC_CMD_FAST_READ_DUMMY;	//pending This was changed
-
-   /* Select device. */
-   spi_select (lan9252);
-  // HAL_GPIO_WritePin(SELECT_GPIO_Port, SELECT_Pin, 0);
-   /* Read data */
-//   write (lan9252, data, sizeof(data));
-//   read (lan9252, result, sizeof(result));
-   ecat_write_raw_nodma(LAN9252_PORT1, data, sizeof(data));
-   //ecat_read_raw_nodma(LAN9252_PORT1, result, sizeof(result));
-   HAL_SPI_TransmitReceive(spi_LAN9252, dataDummy, result, sizeof(data), 2000);
-   //ecat_txread_raw(LAN9252_PORT1,data,result);
-   /* Un-select device. */
-   spi_unselect (lan9252);
-   //HAL_GPIO_WritePin(SELECT_GPIO_Port, SELECT_Pin, 1);
-
-   return ((result[3] << 24) |
-           (result[2] << 16) |
-           (result[1] << 8) |
-            result[0]);
-
-}
-
-/* *
- * @brief	Writes data over SPI using DMA. Further control to verify whether the data has been sent should be implemented afterwards
- * @param	device
- * @param	data as an array
- * @param	size in bytes of the array to be sent
- * @returns	nothing
- * */
-
-void ecat_write_raw_nodma(uint8_t lan9252_port, uint8_t * txdata_array, size_t size) {
-	HAL_SPI_Transmit(spi_LAN9252, txdata_array, (uint16_t)size,2000);
-}
-
-/* *
- * @brief	Reads out data over SPI using DMA. This only returns when the exact time for receiving the data has passed (using dma interruption).
- * @param	device
- * @param	array pointer to data
- * @param	array pointer to buffer where data will be stored
- * @param	size in bytes of the array to be ssent
- * @returns	nothing
- * */
-
-void ecat_read_raw_nodma(uint8_t lan9252_port, uint8_t * rxdata_array,uint16_t Size) {
-	HAL_StatusTypeDef tempStatus;
-
-	tempStatus = HAL_SPI_Receive(spi_LAN9252, rxdata_array, Size, 6000);
-
-//	if(tempStatus == HAL_OK) {
-//		while(ecatDMAonlyRcvd==FALSE);//waits until the DMA complete RX is set
-//		ecatDMAonlyRcvd=FALSE;	//TODO This variable should be reinitialize once the whole LAN9252 is restarted
-//	}
-//	else
-//		return;
 }
