@@ -79,42 +79,78 @@ void ecat_SM (void * argument) {
 //				}
 
 				//exit
-				if (rcvdData == TEST_RESPONSE || 0x01) {
+				if (rcvdData == TEST_RESPONSE ) {
 					rcvdData = 0x00;
-					ESC_init_mod();
 					uint32_t temp4bytes;
-				   /*  wait until ESC is started up */	//This should be deleted afterwards, since it is only temporary while testing ecat_slv.c
-				   while ((rcvdData & 0x0001) == 0)
-				   {
-						  temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
-						  //ESC_read_csr(ESC_CSR_DATA_REG, &temp4bytes, sizeof(temp4bytes));
-						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-						  lan9252_write_32(ESC_CSR_DATA_REG,0x01020304);
-						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-						  lan9252_write_32(ESC_CSR_DATA_REG,0x04030201);
-						  //ESC_read_csr(ESC_CSR_DATA_REG, &temp4bytes, sizeof(temp4bytes));
-						  ESC_read_csr(ESC_CSR_BUILD_8REG, &temp4bytes, sizeof(temp4bytes)-2);
-						  ESC_read_csr(ESC_CSR_TYPE_8REG, &temp4bytes, sizeof(temp4bytes)-2);
+//					ESC_init_mod();
 
-						 ESC_read_csr(ESC_CSR_AL_EVENT_MASK, &temp4bytes, sizeof(temp4bytes));
-					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
-								sizeof (ESC_status));
-					  ESC_status = etohs (ESC_status);
-					  rcvdData = ESC_status;
-
-					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &temp4bytes,
-					  								sizeof (temp4bytes));
-					  temp4bytes = etohs (temp4bytes);
-
-
-					  ESC_read (ESC_CSR_REV_8REG, (void *) &temp4bytes,
-													sizeof (temp4bytes));
-					  temp4bytes = etohs (ESC_status);
-
-
-
-
-				   }
+//				   /*  wait until ESC is started up */	//This should be deleted afterwards, since it is only temporary while testing ecat_slv.c
+//				  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
+//				  lan9252_write_32(ESC_CSR_DATA_REG,0x01020304);
+//				  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
+//				  lan9252_write_32(ESC_CSR_DATA_REG,0x04030201);
+//				  ESC_read_csr(ESC_CSR_PDI_CTRL_REG, &temp4bytes, sizeof(temp4bytes)-2);
+//				  ESC_read_csr(ESC_CSR_BUILD_8REG, &temp4bytes, sizeof(temp4bytes)-2);
+//				  ESC_read_csr(ESC_CSR_TYPE_8REG, &temp4bytes, sizeof(temp4bytes)-2);
+//				  uint8_t test_2 = 0;
+//				  uint16_t test16 = 0;
+//
+//				   while ((rcvdData & 0x0001) == 0)
+//				   {
+//						  temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
+//
+//						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
+//						  lan9252_write_32(ESC_CSR_DATA_REG,0x01020304);
+//						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
+//						  lan9252_write_32(ESC_CSR_DATA_REG,0x04030201);
+//						  ESC_read_csr(ESC_CSR_BUILD_8REG, &temp4bytes, sizeof(temp4bytes)-2);
+//						  ESC_read_csr(ESC_CSR_TYPE_8REG, &temp4bytes, sizeof(temp4bytes)-2);
+//
+//						 ESC_read_csr(ESC_CSR_AL_EVENT_MASK, &temp4bytes, sizeof(temp4bytes));
+//					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
+//								sizeof (ESC_status));
+//					  ESC_status = etohs (ESC_status);
+//					  rcvdData = ESC_status;
+//
+//					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &temp4bytes,
+//					  								sizeof (temp4bytes));
+//					  ESC_read (ESC_CSR_FMMUS_OFFSET, (void *) &temp4bytes,
+//					  								sizeof (temp4bytes));
+//					  temp4bytes = etohs (temp4bytes);
+//
+//					  ESC_read (ESC_CSR_BUILD_8REG, (void *) &temp4bytes,
+//					  								sizeof (temp4bytes));
+//					  temp4bytes = etohs (temp4bytes);
+//
+//
+//					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &test_2,
+//					  								sizeof (test_2));
+//					  test_2 = etohs (test_2);
+//
+//					  ESC_read (ESC_CSR_RW_ALIAS_ADDRESS, (void *) &test16,
+//					  								sizeof (test16));
+//
+//					  test16 = 0x0201;
+//					  ESC_write(ESC_CSR_RW_ALIAS_ADDRESS, &test16, sizeof(test16));
+//
+//					  ESC_read (ESC_CSR_RW_ALIAS_ADDRESS, (void *) &test16,
+//					  								sizeof (test16));
+//
+//					  ESC_read (ESC_CSR_REV_8REG, (void *) &temp4bytes,
+//													sizeof (temp4bytes));
+//					  temp4bytes = etohs (ESC_status);
+//
+//					  ESC_read (ESC_CSR_PDI_CTRL_REG-4, (void *) &test_2,
+//													sizeof (test_2));
+//					  test_2 = etohs (test_2);
+//					  ESC_read (ESC_CSR_ESC_CTRL_REG, (void *) &temp4bytes,
+//													sizeof (temp4bytes));
+//					  temp4bytes = etohs (ESC_status);
+//
+//
+//
+//
+//				   }
 					temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
 					ecat_step = ec_idle;
 

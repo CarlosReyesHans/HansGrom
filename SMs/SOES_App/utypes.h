@@ -18,13 +18,18 @@
 
 typedef struct
 {
-   uint8_t button;
-   uint32_t encoder;
+   uint16_t temp[15];
+   uint16_t status;
+   uint16_t event;
+   uint16_t error;
 } _Rbuffer;
 
 typedef struct
 {
-   uint8_t LED;
+   uint16_t command;
+   uint16_t testVal0;
+   uint16_t testVal1;
+   uint16_t testVal2;
 } _Wbuffer;
 
 typedef struct

@@ -96,7 +96,7 @@ uint32_t invert32data(uint32_t data) {
 }
 
 uint16_t invert16data(uint16_t data) {
-	return 	data<<15&(1<<15)|
+	return 	(data<<15&(1<<15)|
 			data<<14&(1<<14)|
 			data<<13&(1<<13)|
 			data<<12&(1<<12)|
@@ -111,7 +111,7 @@ uint16_t invert16data(uint16_t data) {
 			data<<3&(1<<3)|
 			data<<2&(1<<2)|
 			data<<1&(1<<1)|
-			data&(1);
+			data&(1));
 }
 
 /* ESC read CSR function */
@@ -121,7 +121,7 @@ void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
    uint32_t value;
    uint32_t value2;
 
-   value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | (address<<2));//
+   value = (ESC_CSR_CMD_READ | ESC_CSR_CMD_SIZE(len) | (address));//<<2
    //spi_select (lan9252);
    lan9252_write_32(ESC_CSR_CMD_REG, value);
    do

@@ -4,6 +4,7 @@
  */
 #include <stddef.h>
 #include "esc.h"
+#include "esc_hw.h"
 #include "esc_coe.h"
 #include "esc_foe.h"
 #include "esc_eoe.h"
@@ -314,10 +315,11 @@ void ecat_slv_init (esc_cfg_t * config)
    ESC_config (config);
    /* Call HW init */
    ESC_init (config);
-
+ uint16_t anotherTemp = 0;
    /*  wait until ESC is started up */
    while ((ESCvar.DLstatus & 0x0001) == 0)
    {
+	  ESC_read_csr(ESCREG_DLSTATUS, &anotherTemp, sizeof(anotherTemp));
       ESC_read (ESCREG_DLSTATUS, (void *) &ESCvar.DLstatus,
                 sizeof (ESCvar.DLstatus));
       ESCvar.DLstatus = etohs (ESCvar.DLstatus);

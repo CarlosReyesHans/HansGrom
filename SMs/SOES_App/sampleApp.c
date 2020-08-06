@@ -20,6 +20,7 @@
 #include "utypes.h"
 //#include "bsp.h"			// << BSAP compatibility already included in the main file, stm32f446ze
 #include "bootstrap.h"
+#include "AxisCommHub_definitions.h"
 
 #include "main.h"
 #include "cmsis_os.h"
@@ -32,6 +33,8 @@ _Cbuffer    Cb;
 
 uint32_t encoder_scale;
 uint32_t encoder_scale_mirror;
+
+uint16_t masterCommand,masterTest0,masterTest1,masterTest2;
 
 /*-----------------------------Test variables-------------------------------------*/
 uint8_t testInputButton;
@@ -48,17 +51,27 @@ _SMmap SMmap3[];
 void cb_get_inputs (void)
 {
    //Rb.button = gpio_get(GPIO_BUTTON_SW1);
-	Rb.button = testInputButton;
+	//Rb.button = testInputButton;
    //Rb.button = (flash_drv_get_active_swap() && 0x8);
-   Cb.reset_counter++;
-   Rb.encoder =  Cb.reset_counter;
+   //Cb.reset_counter++;
+   //Rb.encoder =  Cb.reset_counter;
+	Rb.status = 0xFA;
+	Rb.event = 0xFA;
+	Rb.error = 0xFA;
+	for (uint8_t i = 0; i < NUM_OF_SENSORS;i++) {
+		Rb.temp[i] = 0x0A; //TODO Link to a buffer
+	}
 }
 
 void cb_set_outputs (void)
 {
 	//gpio_set(GPIO_LED_BLUE, Wb.LED & BIT(0));
-	testOutputLed ^= 1;		// Only toggles an internal bit. //CHCKME This toggle may collide with any other test routine.
-	HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+	//testOutputLed ^= 1;		// Only toggles an internal bit. //CHCKME This toggle may collide with any other test routine.
+	//HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+	masterCommand = Wb.command;
+	masterTest0 = Wb.testVal0;
+	masterTest1 = Wb.testVal1;
+	masterTest2 = Wb.testVal2;
 
 }
 
