@@ -38,8 +38,8 @@
 #define MAX_RXPDO_SIZE   42
 #define MAX_TXPDO_SIZE   42
 
-#define MAX_MAPPINGS_SM2 1
-#define MAX_MAPPINGS_SM3 2
+#define MAX_MAPPINGS_SM2 0
+#define MAX_MAPPINGS_SM3 0
 
 
 
