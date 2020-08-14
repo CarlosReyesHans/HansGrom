@@ -112,7 +112,7 @@ const _objd SDO1018[] =
   {0x03, DTYPE_UNSIGNED32, 32, ATYPE_RO, &acName1018_03[0], 0x00000001, NULL},
   {0x04, DTYPE_UNSIGNED32, 32, ATYPE_RO, &acName1018_04[0], 0x00000000, NULL}
 };
-const _objd SDO1600[] =
+const _objd SDO1600[] =	//Outputs from Master, to RXPDO
 { {0x00, DTYPE_UNSIGNED8, 8, ATYPE_RO, &acNameNOE[0], 0x04, NULL},
   {0x01, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acNameMO[0], 0x70000110, NULL},
   {0x02, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acNameMO[0], 0x70000210, NULL},
@@ -167,8 +167,8 @@ const _objd SDO1C13[] =
 
 const _objd SDO6000[] =
 { {0x00, DTYPE_UNSIGNED8, 8, ATYPE_RO, &acNameNOE[0], 0x0F, NULL},
-  {0x01, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acName6000_01[0], 0, &(Rb.temp[0])},
-  {0x02, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acName6000_02[0], 0, &(Rb.temp[1])},
+  {0x01, DTYPE_UNSIGNED16, 16, ATYPE_RW, &acName6000_01[0], 0, &(Rb.temp[0])},
+  {0x02, DTYPE_UNSIGNED16, 16, ATYPE_RW, &acName6000_02[0], 0, &(Rb.temp[1])},
   {0x03, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acName6000_03[0], 0, &(Rb.temp[2])},
   {0x04, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acName6000_04[0], 0, &(Rb.temp[3])},
   {0x05, DTYPE_UNSIGNED16, 16, ATYPE_RO, &acName6000_05[0], 0, &(Rb.temp[4])},

@@ -29,17 +29,17 @@
 #define MBX1_smc_b       0x22
 
 #define SM2_sma          0x1100
-#define SM2_smc          0x24
+#define SM2_smc          0x64
 #define SM2_act          1
-#define SM3_sma          0x1180
+#define SM3_sma          0x1400
 #define SM3_smc          0x20
 #define SM3_act          1
 
 #define MAX_RXPDO_SIZE   42
 #define MAX_TXPDO_SIZE   42
 
-#define MAX_MAPPINGS_SM2 0
-#define MAX_MAPPINGS_SM3 0
+#define MAX_MAPPINGS_SM2 10		//<<RXPDO
+#define MAX_MAPPINGS_SM3 20		//<<TXPDO
 
 
 

@@ -40,11 +40,11 @@ uint16_t masterCommand,masterTest0,masterTest1,masterTest2;
 uint8_t testInputButton;
 uint8_t testOutputLed;
 
-_ESCvar ESCvar;		// << Instance of the ESC that are used so far within smEcat.c
-_MBXcontrol MBXcontrol[];
-uint8_t MBX[];
-_SMmap SMmap2[];
-_SMmap SMmap3[];
+//_ESCvar ESCvar;		// << Instance of the ESC that are used so far within smEcat.c
+//_MBXcontrol MBXcontrol[];	//<< This should be deleted since it could create problems when running the full stack
+//uint8_t MBX[];
+//_SMmap SMmap2[];
+//_SMmap SMmap3[];
 
 
 
