@@ -55,11 +55,11 @@ void cb_get_inputs (void)
    //Rb.button = (flash_drv_get_active_swap() && 0x8);
    //Cb.reset_counter++;
    //Rb.encoder =  Cb.reset_counter;
-	Rb.status = 0xFA;
-	Rb.event = 0xFA;
-	Rb.error = 0xFA;
+	Rb.status += 0xFA;
+	Rb.event += 0xFA;
+	Rb.error += 0xFA;
 	for (uint8_t i = 0; i < NUM_OF_SENSORS;i++) {
-		Rb.temp[i] = 0x0A; //TODO Link to a buffer
+		Rb.temp[i] += 0x01; //TODO Link to a buffer
 	}
 }
 

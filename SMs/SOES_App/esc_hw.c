@@ -205,7 +205,7 @@ void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
    byte_offset += temp_len;
 
    /* Select device. */
-   //spi_select (lan9252);
+   spi_select (lan9252);
    /* Send command and address for fifo read */
    data[0] = ESC_CMD_FAST_READ;
    data[1] = ((ESC_PRAM_RD_FIFO_REG >> 8) & 0xFF);
@@ -225,7 +225,7 @@ void ESC_read_pram (uint16_t address, void *buf, uint16_t len)
       byte_offset += temp_len;
    }
    /* Un-select device. */
-   //spi_unselect (lan9252);
+   spi_unselect (lan9252);
 }
 
 /* ESC write process data ram function */

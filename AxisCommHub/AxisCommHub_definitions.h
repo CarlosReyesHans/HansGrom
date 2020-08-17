@@ -13,7 +13,7 @@
 #include "main.h"
 
 //struct temp	//TODO This should be an struct to better handling
-#define	NUM_OF_SENSORS	3
+#define	NUM_OF_SENSORS	15
 #define	TRUE	1
 #define	FALSE	0
 #define FAILED	-1
