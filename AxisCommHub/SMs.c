@@ -156,6 +156,7 @@ extern volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd,refreshTimeoutLed;
 #define TEMP_READOUT_PERIOD	100		//in ms
 
 int32_t	temperatureData[NUM_OF_SENSORS];
+int16_t	gv_temperatureData[NUM_OF_SENSORS];
 
 
 

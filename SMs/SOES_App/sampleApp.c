@@ -26,6 +26,9 @@
 #include "cmsis_os.h"
 
 
+//Extern declared in SMs
+extern int16_t	gv_temperatureData[NUM_OF_SENSORS];
+
 /* Application variables */
 _Rbuffer    Rb;
 _Wbuffer    Wb;
@@ -59,7 +62,7 @@ void cb_get_inputs (void)
 	Rb.event += 0xFA;
 	Rb.error += 0xFA;
 	for (uint8_t i = 0; i < NUM_OF_SENSORS;i++) {
-		Rb.temp[i] += 0x01; //TODO Link to a buffer
+		Rb.temp[i] = gv_temperatureData[i]; //TODO Link to a buffer
 	}
 }
 
