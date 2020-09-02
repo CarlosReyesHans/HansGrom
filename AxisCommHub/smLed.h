@@ -8,10 +8,10 @@
 #ifndef SMLED_H_
 #define SMLED_H_
 
+#include "AxisCommHub_definitions.h"
+
 /******************************************* LED Rings Space *********************************************************************/
-#define MAX_OF_LEDRINGS			4		//This values should be modified in the LED library
-#define NUM_OF_LEDRINGS			2
-#define NUM_OF_LEDS_PER_RING	30	//PENDING this should match with library
+
 #define EFFECTS_ACTIVATED	0
 #define	EFFECT_REFRESH_PERIOD	10U	//TODO this sn=hould be linked to the library times the refresh period
 #define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms @ 60HZ

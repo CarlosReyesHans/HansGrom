@@ -33,8 +33,8 @@ void ledRings_SM (void * argument) {
 
 		switch (led_step) {
 			case	L_config:
+				//	action
 
-					//chsetupOK[i] = config1WireCh(i) ? TRUE : FALSE;
 				if (NUM_OF_LEDRINGS > 0) {
 					if(ledDMA_configCh(1,&htim8) != FAILED)
 						chsetupOK[0] = TRUE;
@@ -57,7 +57,7 @@ void ledRings_SM (void * argument) {
 //				EFFECTS_ACTIVATED ? led_setInitEffects() : led_setInitColors();	//PENDING Activating of the effects
 				led_setInitColors();
 
-				//exit
+				//	exit
 				if (error) notifyError(ERR_PWM_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				error = 0;		//PENDING should this be global and be working in another SM?
 
@@ -91,8 +91,9 @@ void ledRings_SM (void * argument) {
 				break;
 
 			case	L_waitDMA:
-				//osThreadYield();	//CHCKME this may not be needed
+
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
+
 				//exit
 
 				if(dmaLed1_rcvd && dmaLed2_rcvd) { //SAFE: It is not possible that this condition is not true unless there is a timeout

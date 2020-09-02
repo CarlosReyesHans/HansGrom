@@ -362,13 +362,6 @@ void timeoutCallback_tsens(void * argument) {
 
 
 
-/*------------------------------------------ Event Handler functions ----------------------------------------------------------*/
-
-
-/*------------------------------------------ LED Ring functions ----------------------------------------------------------*/
-
-/*----------------------------------------------- ECAT SM -------------------------------------------------------------*/
-
 /*---------------------------------------------- EXTRA -------------------------------------------------------------------------*/
 
 void eventTesterTask (void* argument) {
@@ -389,33 +382,6 @@ void eventTesterTask (void* argument) {
 	}
 }
 
-//PENDING Describe or delete this function
-
-void goTest (void) {
-	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	static uint16_t temporal_buffer1[20] = {50,50,50,50,50,25,25,25,25,25,50,50,50,50,50,25,25,25,25,0};
-	static uint16_t temporal_buffer2[20] = {10,10,10,10,10,10,10,10,10,10,90,90,90,90,90,90,90,90,90,0};
-	static uint16_t temporal_buffer3[20] = {50,50,50,50,50,50,50,50,10,10,10,10,10,10,10,10,10,10,10,0};
-	static uint16_t temporal_buffer4[20] = {10,10,10,10,10,10,10,10,10,10,10,10,50,50,50,50,50,50,50,0,};
-	HAL_StatusTypeDef temporal_status;
-	//HAL_TIM_PWM_DeInit(&htim2);
-	//HAL_TIM_PWM_DeInit(&htim3);
-	//HAL_TIM_PWM_Init(&htim2);
-	//HAL_TIM_PWM_Init(&htim3);
-	temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, (uint32_t*)temporal_buffer1, 20);
-	//temporal_status = HAL_TIM_PWM_Start_DMA(&htim3, TIM_CHANNEL_1, (uint32_t*)temporal_buffer2, 20);
-	temporal_status = HAL_TIM_PWM_Start_DMA(&htim4, TIM_CHANNEL_1, (uint32_t*)temporal_buffer3, 20);
-	temporal_status = HAL_TIM_PWM_Start_DMA(&htim3, TIM_CHANNEL_3, (uint32_t*)temporal_buffer4, 20);
-	//temporal_status = HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-	//htim2.Instance->CCR1 = 50;
-	//htim2.Instance->CCR4 = 25;
-	while (1) {
-		//temporal_status = HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1,(uint32_t*) temporal_buffer, 10);
-		HAL_Delay(1000);
-	}
-
-}
 
 /*
  * @brief TODO IS THIS A SM?? Sate Machine for error/event handler
@@ -445,7 +411,7 @@ void uartUpdt (void * argument) {
 
 
 /* *
- * @brief	This function only adds the threads CHCKME Still it could be a task manager
+ * @brief	This function only adds the threads to be executed to the OS
  * */
 void addThreads(void) {
 	evt_sysSignals = osEventFlagsNew(NULL);
@@ -454,11 +420,12 @@ void addThreads(void) {
 		__NOP();
 	}
 
-	//Initializing the threads
+	//	Initializing main threads
 	tempSensTHandle = osThreadNew(tempSens_SM, NULL, &tempSensT_attributes);
 	ledRingsTHandle = osThreadNew(ledRings_SM, NULL, &ledRingsT_attributes);
 	ecatSMTHandle = osThreadNew(ecat_SM, NULL, &ecatSMT_attributes);
 	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
+
 	//	Auxiliar tasks
 	ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
 	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
@@ -466,8 +433,6 @@ void addThreads(void) {
 	ecatStatus = osThreadSuspend(ecatSOESTHandler);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
-	//ecatInitTHandle = osThreadNew(ecatInitFunc, NULL, &ecatInitT_attributes);	//Only for raw tests with the SPI
-
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
 	//Debug tasks

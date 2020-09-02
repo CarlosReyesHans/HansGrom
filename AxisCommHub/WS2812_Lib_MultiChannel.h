@@ -8,17 +8,18 @@
 
 #pragma once
 
-//#include "stm32f4xx_hal_spi.h"
+
 #include "SMs.h"
 #include "smLed.h"
-TIM_HandleTypeDef htim1;//htim2;
-DMA_HandleTypeDef hdma_tim1_ch1;
 
-#define WS2812_NUM_LEDS_CH1		2	//58)
-//Multichannel
-#define WS2812_NUM_LEDS_CH2		2
-#define WS2812_NUM_LEDS_CH3		10
-#define WS2812_NUM_LEDS_CH4		10
+#define WS2812_NUM_LEDS_CH1		NUM_OF_LEDS_PER_RING
+
+//	Multichannel
+#define WS2812_NUM_LEDS_CH2		NUM_OF_LEDS_PER_RING
+#define WS2812_NUM_LEDS_CH3		NUM_OF_LEDS_PER_RING	//0
+#define WS2812_NUM_LEDS_CH4		NUM_OF_LEDS_PER_RING	//0
+
+//	Timing definitions
 
 
 #define  WS2812_TIM_PRESCALE    0  // F_T3  = 72 MHz (13.88ns)
@@ -32,10 +33,13 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 
 // Global variables for Axis communication board
 
-volatile uint8_t currentColors[MAX_OF_LEDRINGS];	//Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
+//TIM_HandleTypeDef htim1;
+//DMA_HandleTypeDef hdma_tim1_ch1;
+
+
+volatile uint8_t currentColors[MAX_OF_LEDRINGS];	// CHCKME This may not be used //Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
 volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd, refreshTimeoutLed;
-//volatile uint8_t refreshTime;	//TODO Delete if it is not used
-volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING], ledRing2Data[NUM_OF_LEDS_PER_RING];
+//volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING], ledRing2Data[NUM_OF_LEDS_PER_RING];
 
 
 

@@ -23,7 +23,7 @@ uint8_t buffer_updated = 0;
 
 /*------------------------------------------------------Global variables----------------------------------------------------------------------*/
 // TIMER Handlers used in the library
-static TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;
+static TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Used for interruption recognition
 static DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
 
 

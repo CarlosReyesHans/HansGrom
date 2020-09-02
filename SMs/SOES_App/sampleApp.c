@@ -15,7 +15,9 @@
  * LICENSE file in the project root for full license information
  */
 
-//#include <kern.h>			// << Kernel already added within the main file, it is indeed the CMSIS+FreeRTOS
+//#include <kern.h>			// << Kernel added within  the CMSIS+FreeRTOS
+#include "cmsis_os.h"
+
 #include "ecat_slv.h"
 #include "utypes.h"
 //#include "bsp.h"			// << BSAP compatibility already included in the main file, stm32f446ze
@@ -23,19 +25,17 @@
 #include "AxisCommHub_definitions.h"
 
 #include "main.h"
-#include "cmsis_os.h"
 
 
-//Extern declared in SMs
-extern int16_t	gv_temperatureData[NUM_OF_SENSORS];
+
+//External global variables
+extern int16_t	gv_temperatureData[NUM_OF_SENSORS];		//	Declared in SMs.c
 
 /* Application variables */
 _Rbuffer    Rb;
 _Wbuffer    Wb;
 _Cbuffer    Cb;
 
-uint32_t encoder_scale;
-uint32_t encoder_scale_mirror;
 
 uint16_t masterCommand,masterTest0,masterTest1,masterTest2;
 
@@ -44,10 +44,6 @@ uint8_t testInputButton;
 uint8_t testOutputLed;
 
 //_ESCvar ESCvar;		// << Instance of the ESC that are used so far within smEcat.c
-//_MBXcontrol MBXcontrol[];	//<< This should be deleted since it could create problems when running the full stack
-//uint8_t MBX[];
-//_SMmap SMmap2[];
-//_SMmap SMmap3[];
 
 
 
@@ -68,10 +64,8 @@ void cb_get_inputs (void)
 
 void cb_set_outputs (void)
 {
-	//gpio_set(GPIO_LED_BLUE, Wb.LED & BIT(0));
-	//testOutputLed ^= 1;		// Only toggles an internal bit. //CHCKME This toggle may collide with any other test routine.
-	//HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-	masterCommand = Wb.command;
+
+	masterCommand = Wb.command;		// In the future this will be a shared memory
 	masterTest0 = Wb.testVal0;
 	masterTest1 = Wb.testVal1;
 	masterTest2 = Wb.testVal2;
@@ -106,7 +100,7 @@ void post_object_download_hook (uint16_t index, uint8_t subindex,
          {
             case 0x01:
             {
-               encoder_scale_mirror = encoder_scale;
+               //encoder_scale_mirror = encoder_scale;	//Pending The 0x7100 address object could be used afterwards
                break;
             }
          }
@@ -129,6 +123,8 @@ void post_object_download_hook (uint16_t index, uint8_t subindex,
 
 void soes (void * arg)
 {
+	uint32_t time2soes;
+
 
    /* Setup config hooks */
    static esc_cfg_t config =
@@ -152,10 +148,23 @@ void soes (void * arg)
    };
 
    ecat_slv_init (&config);
-   // PENDING Here could come a osThreadYield() or osEventsWait(Any flag comming from SMs)
+   //	Starting soes app timing
+   time2soes = osKernelGetTickCount();
+   //time2soes += SOES_REFRESH_CYCLE;
+   //osDelayUntil(time2soes);
+
    while (1)
    {
-      ecat_slv();
+	   //	action
+
+	   //time2soes += SOES_REFRESH_CYCLE;
+	   ecat_slv();
+
+	   //	exit
+	   //osDelayUntil(time2soes);
+	   osDelay(SOES_REFRESH_CYCLE);
+	   // PENDING This could be set with osEventsWait(Any flag comming from SMs)
+
    }
 }
 
