@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//#include "AxisCommHub_definitions.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -146,6 +146,12 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   printf("Initializing\n");
+
+  // Linking mxCube functions to library functions
+  //initCH1ptr = MX_TIM8_Init;
+  //initCH1ptr = MX_TIM3_Init;
+  //deInitCHxptr = HAL_TIM_Base_DeInit;
+
   addThreads();
   initOwApp();
   //goTest();

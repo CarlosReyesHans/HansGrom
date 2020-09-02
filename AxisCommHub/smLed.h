@@ -12,13 +12,26 @@
 
 /******************************************* LED Rings Space *********************************************************************/
 
-#define EFFECTS_ACTIVATED	0
+#define EFFECTS_ACTIVATED		0
 #define	EFFECT_REFRESH_PERIOD	10U	//TODO this sn=hould be linked to the library times the refresh period
 #define	PWM_REFRESH_PERIOD		30U	//TODO this should be linked to the library in ms @ 60HZ
 
+//	Enums for states
+
+enum enum_colorStates {color_preop,color_error,color_normal,color_warning,color_custom} currentColorState;
 
 
+//	IMPORTANT!!
+//	Function pointers used for init and deint within the library.
+//	Consider that while linking, the order should match with the order in L_config state of smLed,
+//	as well as in "Auxiliar definitions for HAL adaptation" section of AxisCommHub_definitions.h and
+//	clearly the DMA interruptions HAL_TIM_PWM_PulseFinishedCallback within WS2812 Lib.
 
+void (*initCH1ptr)(void);
+void (*initCH2ptr)(void);
+//void (*initCH3)(void);
+//void (*initCH4)(void);
+void (*deInitCHxptr)(void* arg);
 
 /*--------------------------------------------LED Rings functions-------------------------------------------------------------------------*/
 
@@ -64,6 +77,10 @@ void timeoutCallback_led(void * argument);
 
 void refreshCallback_led(void * argument);
 
+
+void setColorState(enum enum_colorStates colorState);
+
+void ledDMA_restartCH (uint8_t ch);	//TODO Change to a pwm handler
 
 
 

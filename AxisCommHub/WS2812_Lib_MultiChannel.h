@@ -3,14 +3,16 @@
  * @Author: Nicolas Dammin, 2016
  * 		Changes:
  * 		Time constants are adjusted to use case
- * 		TIMER and DMA handlers, mcu library
+ * 		TIMER and DMA handlers, mcu library and other auxiliar functions for multi channel by Carlos Reyes, 2020
  */
 
 #pragma once
 
-
 #include "SMs.h"
 #include "smLed.h"
+
+//#include "AxisCommHub_definitions.h"
+
 
 #define WS2812_NUM_LEDS_CH1		NUM_OF_LEDS_PER_RING
 
@@ -38,7 +40,7 @@
 
 
 volatile uint8_t currentColors[MAX_OF_LEDRINGS];	// CHCKME This may not be used //Global array for colors to be updated, this will be changed continuously by EventHandler/Notification //CHCKME this is shared memory
-volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd, refreshTimeoutLed;
+volatile uint8_t dmaLed1_rcvd, dmaLed2_rcvd;
 //volatile uint8_t ledRing1Data[NUM_OF_LEDS_PER_RING], ledRing2Data[NUM_OF_LEDS_PER_RING];
 
 
@@ -97,14 +99,14 @@ int8_t startDMA(uint8_t ch);
 
 int8_t ledDMA_send(uint8_t ch);
 
-void ledDMA_deinit (uint8_t ch);	//TODO Change to a pwm handler
 
-void led_setInitColors(void);
 void dmaCallback_led1 (void);
 void dmaCallback_led2(void);
 void checkAllDmaRdy(void);
 
+
 int8_t ledDMA_configCh (uint8_t ch,TIM_HandleTypeDef *handlerPtr);
+
 
 
 

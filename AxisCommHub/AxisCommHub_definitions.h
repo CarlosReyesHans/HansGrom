@@ -8,7 +8,9 @@
 #ifndef AXISCOMMHUB_DEFINITIONS_H_
 #define AXISCOMMHUB_DEFINITIONS_H_
 
+
 //	General include files
+
 #include "LAN9252_spi.h"
 #include "main.h"
 
@@ -32,9 +34,10 @@
 #define	ERR_SENSOR_INIT		10
 #define ERR_SENSOR_LOST		11
 #define ERR_SENSOR_TIMEOUT	12
-#define ERR_PWM_INIT		20
-#define ERR_PWM_TIMEOUT		21
-#define ERR_PWM_SEND		22
+#define ERR_LED_INIT		20
+#define ERR_LED_TIMEOUT		21
+#define ERR_LED_SEND		22
+#define	ERR_LED_OSTIM		23
 #define	ERR_ECAT_INIT		30
 #define ERR_ECAT_F_COMM		31
 #define ERR_ECAT_TIMEOUT	32

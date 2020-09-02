@@ -8,7 +8,7 @@
 #ifndef LAN9252_SPI_TEMP_H_
 #define LAN9252_SPI_TEMP_H_
 
-#include "cmsis_os.h"
+
 #include "main.h"
 #include "AxisCommHub_definitions.h"
 #include "esc_hw.h"

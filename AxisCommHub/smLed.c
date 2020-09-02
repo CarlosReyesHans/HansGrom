@@ -7,9 +7,13 @@
 
 #include "SMs.h"
 #include "smLed.h"
+//#include "WS2812_Lib_MultiChannel.h"
 
 osTimerId_t refreshLed,timeoutLed;	//Pending: this could be local or static
-static uint8_t timedoutLed;	//PEnding is this necessary?
+static volatile uint8_t boolTimeoutLed,boolRefreshTimeoutLed;	//PEnding is this necessary?
+
+//External variables
+extern TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Declared in WS2812 Libraries
 
 /*
  * @brief Sate Machine for overall task of LED RINGS controlled by PWM
@@ -20,7 +24,6 @@ void ledRings_SM (void * argument) {
 	uint8_t chsetupOK[NUM_OF_LEDRINGS];
 	uint8_t error = 0;
 	osStatus_t timerStatus;
-	static WS2812_RGB_t rgbTemp = {255,0,0};
 
 	timeoutLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
 	refreshLed = osTimerNew(refreshCallback_led, osTimerOnce, NULL, NULL);
@@ -32,9 +35,9 @@ void ledRings_SM (void * argument) {
 	while(1) {		//Infinite loop enforced by task execution
 
 		switch (led_step) {
-			case	L_config:
+		/*--------------------------------------------------------------------------------*/
+			case	L_config:		//Initializes and links the handlers with WS2812 library
 				//	action
-
 				if (NUM_OF_LEDRINGS > 0) {
 					if(ledDMA_configCh(1,&htim8) != FAILED)
 						chsetupOK[0] = TRUE;
@@ -44,7 +47,7 @@ void ledRings_SM (void * argument) {
 					}
 				}
 				if (NUM_OF_LEDRINGS > 1) {
-					if(ledDMA_configCh(2,&htim3) != FAILED)	//pending hdma_tim2_ch2_ch4this needs to be changed back to the ch3
+					if(ledDMA_configCh(2,&htim3) != FAILED)
 						chsetupOK[1] = TRUE;
 					else {
 						chsetupOK[1] = FALSE;
@@ -54,136 +57,151 @@ void ledRings_SM (void * argument) {
 				//if (NUM_OF_LEDRINGS > 2)
 				//if (NUM_OF_LEDRINGS > 3)
 
-//				EFFECTS_ACTIVATED ? led_setInitEffects() : led_setInitColors();	//PENDING Activating of the effects
-				led_setInitColors();
 
 				//	exit
-				if (error) notifyError(ERR_PWM_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
-				error = 0;		//PENDING should this be global and be working in another SM?
-
-				led_step = L_start;
+				if (error) {
+					notifyError(ERR_LED_INIT);	//Pending This should notify over ECAT but not stop the overall SM
+					led_step = L_error;
+				}
+				else {
+					error = 0;
+					//Set the Effects
+					//TODO is there any error?
+					setColorState(color_preop);
+					led_step = L_send;
+				}
 
 				break;
-
-			case L_start:
-
+		/*--------------------------------------------------------------------------------*/
+			case L_send:
+				//	action
 				for (uint8_t i = 1; i <= NUM_OF_LEDRINGS; i++) {
 					if (ledDMA_send(i) == FAILED)
-						notifyError(ERR_PWM_SEND);		//TODO Debug
+						notifyError(ERR_LED_SEND);
 
 				}
-				timerStatus = osTimerStart(timeoutLed, (uint32_t) 1000U);	//Timeout
+				timerStatus = osTimerStart(timeoutLed, (uint32_t) 1000U);	//Timeout for DMA
 				if (timerStatus != osOK) {
-					__NOP(); // CHCKME Handle the error during the start of timer
+					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
 				}
 
 				//exit
-				led_step = EFFECTS_ACTIVATED ? L_updateEffect : L_waitDMA;
-
-
+				led_step = L_waitEvent;
 				break;
-			case	L_updateEffect:	//TODO this may be needed to be done attomically since the NHSM will change it sometimes.
-//				if (led_effectRateUpdt()) {	//Todo This function checks whether the current effect needs to be updated
-//					__NOP();
-//				}
-//				//exit
-				led_step = L_waitDMA;
-				break;
-
-			case	L_waitDMA:
-
+		/*--------------------------------------------------------------------------------*/
+			case	L_waitEvent:
+				//	action
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 
-				//exit
+				//	exit
 
-				if(dmaLed1_rcvd && dmaLed2_rcvd) { //SAFE: It is not possible that this condition is not true unless there is a timeout
+				if (boolTimeoutLed) {
 					if (osTimerStop(timeoutLed) != osOK) {
-						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
+						__NOP();//Handle internal OS  error
+						notifyError(ERR_LED_OSTIM);
 					}
-
-					if(osTimerStart(refreshLed, (uint32_t)PWM_REFRESH_PERIOD)!= osOK) {
-						__NOP(); //Handle the starting error. // Chckme This could be separated into two different timers
+					boolTimeoutLed = FALSE;
+					notifyError(ERR_LED_TIMEOUT);
+					led_step = L_restart;
+					break;
+				}
+				else if(dmaLed1_rcvd && dmaLed2_rcvd) { //	SAFE: Only updates a color state if no timeout
+					if (osTimerIsRunning(timeoutLed)) {
+						if (osTimerStop(timeoutLed) != osOK) {
+							__NOP();//Handle internal OS error
+							notifyError(ERR_LED_OSTIM);
+						}
 					}
 
 					dmaLed1_rcvd = 0;
 					dmaLed2_rcvd = 0;	//Will this be a race condition with the DMA?
 
-					led_step = l_waitRefresh;
+					led_step = L_updateColorState;
 					break;
 				}
 
-				if (timedoutLed) {	//Todo THIS SHOULD BE DELETED AFTER COMPARING THE TIMEOUT FEATURE FROM OSEVENTFLAGS WAIT VS osTIMER
-					if (osTimerStop(timeoutLed) != osOK) {
-						__NOP();//Handle the stop error // TODO This may not be necessary after debugging phase
-					}
-					//notifyError(ERR_PWM_TIMEOUT);
-					timedoutLed = FALSE;
-					led_step = L_restart;
-				}
 				break;
+		/*--------------------------------------------------------------------------------*/
+			case	L_updateColorState:
+				//	action
+				if (errorFlag) {
+					setColorState(color_error);
+				}
+				else if (ecatCMDFlag) {
+					setColorState(color_custom);
+				}
+				else if (warningFlag) {
+					setColorState(color_warning);
+				}
+				else if (normalFlag) {
+					setColorState(color_normal);
+				}
+
+				//	exit
+
+				led_step = EFFECTS_ACTIVATED ? L_updateEffect : l_waitRefresh;
+
+				break;
+		/*--------------------------------------------------------------------------------*/
+			case	L_updateEffect:
+				//	action
+//				if (led_effectRateUpdt()) {	//PENDING This function checks whether the current effect needs to be updated
+//					__NOP();	//PENDING Modify whenever the effects are needed
+//				}
+
+				//	exit
+				led_step = l_waitRefresh;
+				break;
+		/*--------------------------------------------------------------------------------*/
 			case	l_waitRefresh:	//TODO there should be a way to use the OS to sleep the TASK till a signal from interrupt come or TIMEOUT of REFRESH
-				osThreadYield();	//PENDING	To delete it may be enough with the waiting for event
+
+				// action
+				if(osTimerStart(refreshLed, (uint32_t)PWM_REFRESH_PERIOD)!= osOK) {
+					__NOP(); //Handle the OS TIMER starting error.
+					notifyError(ERR_LED_OSTIM);
+					led_step = L_restart;
+					break;
+				}
+				//
+
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 
 				//exit
-				if (notificationFlag) {	//This is a flag changed by Event Handler if something in the overall system has happened
-					//notificationFlag = FALSE;
-					if(osTimerStop(refreshLed)!= osOK) {
-						__NOP();	//Only for debugging error
-					}
-					led_step = L_updateColor;
-					break;
-				}
 
 				//Refreshing time is already elapsed
-				if (refreshTimeoutLed) {
-					if(osTimerStop(refreshLed)!= osOK) {
-						__NOP();	//Only for debugging error
+				if (boolRefreshTimeoutLed) {
+					if(osTimerIsRunning(refreshLed)){
+						if(osTimerStop(refreshLed)!= osOK) {
+							__NOP();	//Only for error debugging
+							notifyError(ERR_LED_OSTIM);
+							led_step = L_restart;
+						}
 					}
-					refreshTimeoutLed = FALSE;
-					led_step = L_start;
+
+					boolRefreshTimeoutLed = FALSE;
+					led_step = L_send;
 				}
 
 				break;
-			case	L_updateColor:
-//				led_colorBufferUpdt(currentColors);	//This access should be atomic and current colors is global array
-				//ws2812_refresh(1)
-				//ws2812_refresh(2)
-				if (errorFlag) {
-					rgbTemp = (WS2812_RGB_t){255,0,0};
-					WS2812_All_RGB(1,rgbTemp,1);
-					rgbTemp = (WS2812_RGB_t){255,0,0};
-					WS2812_All_RGB(2,rgbTemp,1);
-				}
-				else {
-					rgbTemp = (WS2812_RGB_t){0,255,0};
-					WS2812_All_RGB(1,rgbTemp,1);		//PENDING this is ONLY for debugging purposes. This needs to update the colors depending on the state
-					rgbTemp = (WS2812_RGB_t){0,0,255};
-					WS2812_All_RGB(2,rgbTemp,1);
-				}
-
-				//exit
-				led_step = L_start;	//Pending, it cannot go back to wait refresh cause by that moment there is no dma, no timeout
-				break;
-
+		/*--------------------------------------------------------------------------------*/
 			case	L_restart:		//After timeout or error
 
 				if (osTimerIsRunning(timeoutLed))
-					timerStatus = osTimerStop(timeoutLed);	//IMPORTANT! This if a state is modify manually
+					timerStatus = osTimerStop(timeoutLed);
 
 				if (timerStatus != osOK) {
-					__NOP(); //TODO Handle the deletion error
+					__NOP(); //PENDING Handle the deletion error
 				}
 
 				for (uint8_t i = 1; i<=NUM_OF_LEDRINGS; i++) {
-					ledDMA_deinit(i);	//TODO Define this function
+					ledDMA_restartCH(i);	//TODO Define this function
 				}
 
 				//exit
 				led_step = L_config;
 
 				break;
-
+		/*--------------------------------------------------------------------------------*/
 			default:
 				__NOP();
 			}
@@ -199,12 +217,45 @@ void ledRings_SM (void * argument) {
 
 
 /* *
+ * @brief Modifies the currentColors according to argument and refreshes the buffer to be sent.
+ * 			PENDING extend for more than 2 channels
+ * */
+void setColorState(enum enum_colorStates colorState) {
+	WS2812_RGB_t tempRGB;
+
+	switch (colorState) {
+	case color_preop:
+		tempRGB = (WS2812_RGB_t){255,255,0};	//Yellow
+		break;
+	case color_error:
+		tempRGB = (WS2812_RGB_t){255,0,0};		//Red
+		break;
+	case color_normal:
+		tempRGB = (WS2812_RGB_t){0,0,255};		//Blue
+		break;
+	case color_warning:
+		tempRGB = (WS2812_RGB_t){255,165,0};	//Orange
+		break;
+	case color_custom:
+		tempRGB = (WS2812_RGB_t){148,0,211};	//Violet
+	default:
+		tempRGB = (WS2812_RGB_t){169,169,169};	//Gray
+
+	}
+	WS2812_All_RGB(1, tempRGB, TRUE);		//Each channel can be set individually
+	WS2812_All_RGB(2, tempRGB, TRUE);
+	//WS2812_All_RGB(3, tempRGB, TRUE);
+	//WS2812_All_RGB(4, tempRGB, TRUE);
+}
+
+
+/* *
  * @brief	This is the timeout callback function for LED
  * */
 
 void timeoutCallback_led(void * argument) {
 	//do something
-	timedoutLed = TRUE;
+	boolTimeoutLed = TRUE;
 	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
 }
 
@@ -214,8 +265,26 @@ void timeoutCallback_led(void * argument) {
 
 void refreshCallback_led(void * argument) {
 	//do something
-	refreshTimeoutLed = TRUE;
+	boolRefreshTimeoutLed = TRUE;
 	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
 }
 
+/**
+ * @brief	Restarts a PWM CH for LED control at the given channel
+ * 			PENDING extend for 4 or more channels
+ * */
+void ledDMA_restartCH (uint8_t ch) {
+	switch (ch) {
+	case 1:
+		deInitCHxptr((TIM_HandleTypeDef*)ledCH1);
+		initCH1ptr();
+		break;
+	case 2:
+		deInitCHxptr((TIM_HandleTypeDef*)ledCH2);
+		initCH2ptr();
+		break;
+	default:
+		__NOP();
+	}
+}
 

@@ -23,14 +23,14 @@ uint8_t buffer_updated = 0;
 
 /*------------------------------------------------------Global variables----------------------------------------------------------------------*/
 // TIMER Handlers used in the library
-static TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Used for interruption recognition
-static DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
+TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Used for interruption recognition
+DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
 
 
 
 /*-------------------------------------------------Extern variables from other SMs-------------------------------------------------------------*/
 extern osEventFlagsId_t evt_sysSignals;
-extern TIM_HandleTypeDef htim3;
+
 
 
 /*----------------------------------------------------Functions------------------------------------------------------------------------*/
@@ -439,23 +439,12 @@ int8_t WS2812_All_HSV(uint8_t ch, WS2812_HSV_t hsv_col, uint8_t refresh)
 //  }
 //}
 
-/**
- * @brief	De-initialize a PWM at the given channel
- * */
-void ledDMA_deinit (uint8_t ch) {
-	__NOP();
-}	//PENDING Define correctly  and Change to a pwm handler
 
 
-/* *
- * @brief Modifies the currentColorsArray to the initial values and refreshes the buffer to be sent
- * */
-void led_setInitColors(void) {
-	WS2812_RGB_t tempRGB = {0,0,255};
-	WS2812_All_RGB(1, tempRGB, TRUE);		//Each channel can be set individually to the initial color
-	tempRGB = (WS2812_RGB_t){0,255,255};
-	WS2812_All_RGB(2, tempRGB, TRUE);
-}
+/*---------------------------------------New Functions--------------------------------------------------*/
+
+
+
 
 /**
  * @brief	Configure a PWM at the given channel

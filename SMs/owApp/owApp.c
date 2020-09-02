@@ -5,14 +5,14 @@
  *      Author: CarlosReyes
  */
 
-
-#include "main.h"
+#include "AxisCommHub_definitions.h"
+//#include "main.h"
 #include "cmsis_os.h"
 #include "lwow.h"
 #include "devices/lwow_device_ds18x20.h"
 #include "scan_devices.h"
-#include "stdio.h"
-#include "AxisCommHub_definitions.h"
+//#include "stdio.h"
+
 //Creating a new one-wire instance
 
 extern const lwow_ll_drv_t lwow_ll_drv_stm32_hal;

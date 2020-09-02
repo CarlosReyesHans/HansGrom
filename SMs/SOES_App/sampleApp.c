@@ -17,14 +17,14 @@
 
 //#include <kern.h>			// << Kernel added within  the CMSIS+FreeRTOS
 #include "cmsis_os.h"
-
+#include "AxisCommHub_definitions.h"
 #include "ecat_slv.h"
 #include "utypes.h"
 //#include "bsp.h"			// << BSAP compatibility already included in the main file, stm32f446ze
 #include "bootstrap.h"
-#include "AxisCommHub_definitions.h"
 
-#include "main.h"
+
+//#include "main.h"
 
 
 

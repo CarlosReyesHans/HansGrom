@@ -32,10 +32,12 @@
  * Version:         v3.0.0
  */
 #include "lwow.h"
+//#include "AxisCommHub_definitions.h"
+
 
 #if LWOW_CFG_OS && !__DOXYGEN__
-
 #include "cmsis_os.h"
+
 
 uint8_t
 lwow_sys_mutex_create(LWOW_CFG_OS_MUTEX_HANDLE* mutex, void* arg) {

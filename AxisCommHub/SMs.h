@@ -36,7 +36,7 @@ extern DMA_HandleTypeDef hdma_tim2_ch1,hdma_tim2_ch2_ch4;//pending the channel n
 
 //	Declaring the states
 enum enum_sensStates {t_config,t_chk_chs,t_notify,t_read_chs,t_eval_data,t_publish_data,t_sleep,t_error}tS_step;
-enum enum_ledRingStates {L_config,L_start,L_sleep,L_waitDMA,L_updateEffect,l_waitRefresh,L_updateColor,L_restart,L_error }led_step;
+enum enum_ledRingStates {L_config,L_send,L_sleep,L_waitEvent,L_updateEffect,l_waitRefresh,L_updateColorState,L_restart,L_error }led_step;
 enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep,ec_transmitting,ec_restart}ecat_step;	//pending Delete the waitDMA state
 enum enum_eventHStates {evH_waiting, evH_reportErr,evH_notifyEv,evH_finish}evH_step;
 enum enum_events {error_critical,error_non_critical,warning,event_success}eventType;
@@ -44,7 +44,7 @@ enum enum_events {error_critical,error_non_critical,warning,event_success}eventT
 osEventFlagsId_t evt_sysSignals;
 
 volatile uint8_t notificationFlag;
-volatile uint8_t errorFlag; //Assume that the error flag will be changed by the the functions report and notify.
+volatile uint8_t errorFlag,ecatCMDFlag,warningFlag,normalFlag; //Assume that the error flag will be changed by the the functions report and notify.
 
 //	Task handlers for SMs
 osThreadId_t tempSensTHandle;
