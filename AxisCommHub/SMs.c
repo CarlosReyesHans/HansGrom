@@ -17,7 +17,7 @@
 // Add the handlers of the tasks within the SMs.h
 
 
-uint32_t tempSensTBuffer[ 128 ];
+uint32_t tempSensTBuffer[ 192 ];
 StaticTask_t tempSensTControlBlock;
 const osThreadAttr_t tempSensT_attributes = {
 		.name = "tempSensT",
@@ -29,7 +29,7 @@ const osThreadAttr_t tempSensT_attributes = {
 };
 
 
-uint32_t ledRingsTBuffer[ 128 ];
+uint32_t ledRingsTBuffer[ 192 ];
 StaticTask_t ledRingsTControlBlock;
 const osThreadAttr_t ledRingsT_attributes = {
 		.name = "ledRingsT",
@@ -41,7 +41,7 @@ const osThreadAttr_t ledRingsT_attributes = {
 };
 
 
-uint32_t ecatSMTBuffer[ 128 ];
+uint32_t ecatSMTBuffer[ 192 ];
 StaticTask_t ecatSMTControlBlock;
 const osThreadAttr_t ecatSMT_attributes = {
 		.name = "ecatTSM",
@@ -68,19 +68,19 @@ const osThreadAttr_t eventHT_attributes = {
 
 
 
-uint32_t uartPrintTBuffer[ 128 ];
-StaticTask_t uartPrintTControlBlock;
-const osThreadAttr_t uartPrintT_Attributes = {
-		.name = "uartPrintT",
-		.stack_mem = &uartPrintTBuffer[0],
-		.stack_size	= sizeof(uartPrintTBuffer),
-		.cb_mem = &uartPrintTControlBlock,
-		.cb_size = sizeof(uartPrintTControlBlock),
-		.priority = (osPriority_t) osPriorityBelowNormal,
-};
+//uint32_t uartPrintTBuffer[ 64 ];
+//StaticTask_t uartPrintTControlBlock;
+//const osThreadAttr_t uartPrintT_Attributes = {
+//		.name = "uartPrintT",
+//		.stack_mem = &uartPrintTBuffer[0],
+//		.stack_size	= sizeof(uartPrintTBuffer),
+//		.cb_mem = &uartPrintTControlBlock,
+//		.cb_size = sizeof(uartPrintTControlBlock),
+//		.priority = (osPriority_t) osPriorityBelowNormal,
+//};
 
 /*-------------------------ECAT--------------------------------------*/
-uint32_t ecatTestTBuffer[ 128 ];
+uint32_t ecatTestTBuffer[ 192 ];
 StaticTask_t ecatTestTControlBlock;
 const osThreadAttr_t ecatTestT_Attributes = {
 		.name = "ecatTestT",
@@ -91,7 +91,7 @@ const osThreadAttr_t ecatTestT_Attributes = {
 		.priority = (osPriority_t) osPriorityHigh1,
 };
 
-uint32_t ecatSOESTBuffer[1024];
+uint32_t ecatSOESTBuffer[1088];
 StaticTask_t ecatSOESTControlBlock;
 const osThreadAttr_t ecatSOEST_Attrbuttes = {
 		.name = "ecatSOEST",
@@ -117,16 +117,16 @@ const osThreadAttr_t taskManagerT_Attributes = {
 };
 
 
-uint32_t eventTesterTBuffer[64];
-StaticTask_t eventTesterTControlBlock;
-const osThreadAttr_t eventTesterT_Attributes = {
-		.name = "eventTesterT",
-		.stack_mem = &eventTesterTBuffer[0],
-		.stack_size = sizeof(eventTesterTBuffer),
-		.cb_mem = &eventTesterTControlBlock,
-		.cb_size = sizeof(eventTesterTControlBlock),
-		.priority = osPriorityBelowNormal1,
-};
+//uint32_t eventTesterTBuffer[64];
+//StaticTask_t eventTesterTControlBlock;
+//const osThreadAttr_t eventTesterT_Attributes = {
+//		.name = "eventTesterT",
+//		.stack_mem = &eventTesterTBuffer[0],
+//		.stack_size = sizeof(eventTesterTBuffer),
+//		.cb_mem = &eventTesterTControlBlock,
+//		.cb_size = sizeof(eventTesterTControlBlock),
+//		.priority = osPriorityBelowNormal1,
+//};
 
 
 
@@ -427,16 +427,16 @@ void addThreads(void) {
 	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
 
 	//	Auxiliar tasks
-	ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
+	//ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
 	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
-	uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
+	//uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
 	ecatStatus = osThreadSuspend(ecatSOESTHandler);
 	ecatStatus = osThreadSuspend(ecatTestTHandler);
 	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
 	//Debug tasks
-	eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
+	//eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
 }
 
 
