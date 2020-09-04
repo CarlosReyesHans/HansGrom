@@ -12,10 +12,10 @@
 #include "esc_hw.h"
 
 
-osTimerId_t timeoutEcat;	//PEnding this could be local or static?
-static uint8_t timedoutEcat;
-
-extern volatile uint8_t ecatDMArcvd;	//Defined in LAN9252 library
+/*--------------------Variable used specially in this SM-----------------------------------------------------*/
+osTimerId_t timerEcatSM,timerEcatSOES;	//PEnding this could be local or static?
+static volatile uint8_t timedoutEcat,restartEcatFlag;
+static uint8_t escAPPok;
 
 /*---------------------------Variables needed by SOES Application---------------------------*/
 
@@ -25,9 +25,10 @@ extern _MBXcontrol MBXcontrol[];
 extern uint8_t MBX[];
 extern _SMmap SMmap2[];
 extern _SMmap SMmap3[];
-
+/*----------------------------External variables----------------------------------------*/
+extern TIM_HandleTypeDef htim5;		//From main.c
 extern int lan9252; //From lan9252_spi.c
-
+extern volatile uint8_t ecatDMArcvd;	//Defined in LAN9252 library
 
 /*
  * @brief Sate Machine for overall task of eCAT interface
@@ -40,194 +41,155 @@ void ecat_SM (void * argument) {
 	uint16_t ESC_status;
 	//FINISHES
 	uint8_t error = 0;
+	uint8_t firstExec = 1;
 	uint32_t rcvdData;
 	osStatus_t timerStatus;
-	timeoutEcat = osTimerNew(timeoutCallback_ecat, osTimerOnce, NULL, NULL);	//TODO This time out only makes sense if the DMA stops working but does not guarantee that the LAN9252 is actually responding
-	if (timeoutEcat == NULL) {
+
+//	timerEcatSM = osTimerNew(timeoutSMCallback_ecat, osTimerPeriodic, NULL, NULL);
+//	timerEcatSOES = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
+
+	if (timerEcatSM == NULL) {
+		__NOP();	//Handle the problem of creating the timer
+	}
+	if (timerEcatSOES == NULL) {
 		__NOP();	//Handle the problem of creating the timer
 	}
 	while(1) {		//Infinite loop enforced by task execution
 
 		switch (ecat_step) {
+		/*--------------------------------------------------------------------------------*/
 			case	ec_config:
-
+				//	action
 				if(	ecat_SPIConfig(&hspi4) == FAILED) error++;
 
 				//exit
 				if (error) {
 					notifyError(ERR_ECAT_INIT);
-					error = 0;		//TODO should this be global and be working in another SM
+					error = 0;
 					ecat_step = ec_fault;
 					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				else {
-
+					lan9252 = open ("LOCAL_SPI", O_RDWR, 0);
 					ecat_step = ec_checkConnection;
 				}
 
 				break;
-
+		/*--------------------------------------------------------------------------------*/
 			case	ec_checkConnection:
-				lan9252 = open ("LOCAL_SPI", O_RDWR, 0);
-				rcvdData = lan9252_read_32(TEST_BYTE_OFFSET);
+				//	action
+				if(osTimerStart(timerEcatSM, (uint32_t)30) != osOK) {
+					__NOP(); //	Handle this error
+				}
+				osStatus_t timerStatus;
+				timerStatus = osTimerStart(timerEcatSM, (uint32_t) 1000U);	//Timeout for DMA
+				if (timerStatus != osOK) {
+					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
+				}
+				HAL_StatusTypeDef status;
+				htim5.Instance->CNT = 0;
+				status = HAL_TIM_Base_Start_IT(&htim5);
+				osThreadResume(ecatSOESTHandler);	//>> SOES SM starts
+				if(!restartEcatFlag)	//Temporary
+					osEventFlagsWait(evt_sysSignals,ECAT_EVENT, osFlagsWaitAny, osWaitForever);
 
-
-
-					//This function sends out command to receive TEST BYTE with DMA
-//				timerStatus = osTimerStart(timeoutEcat,(uint32_t)2000U);
-//				if (timerStatus != osOK) {
-//					__NOP();	//Handle this error during start of timer
-//				}
-
-				//exit
-				if (rcvdData == TEST_RESPONSE ) {
-					rcvdData = 0x00;
-					uint32_t temp4bytes;
-//					ESC_init_mod();
-
-//				   /*  wait until ESC is started up */	//This should be deleted afterwards, since it is only temporary while testing ecat_slv.c
-//				  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-//				  lan9252_write_32(ESC_CSR_DATA_REG,0x01020304);
-//				  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-//				  lan9252_write_32(ESC_CSR_DATA_REG,0x04030201);
-//				  ESC_read_csr(ESC_CSR_PDI_CTRL_REG, &temp4bytes, sizeof(temp4bytes)-2);
-//				  ESC_read_csr(ESC_CSR_BUILD_8REG, &temp4bytes, sizeof(temp4bytes)-2);
-//				  ESC_read_csr(ESC_CSR_TYPE_8REG, &temp4bytes, sizeof(temp4bytes)-2);
-//				  uint8_t test_2 = 0;
-//				  uint16_t test16 = 0;
-//
-//				   while ((rcvdData & 0x0001) == 0)
-//				   {
-//						  temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
-//
-//						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-//						  lan9252_write_32(ESC_CSR_DATA_REG,0x01020304);
-//						  temp4bytes = lan9252_read_32(ESC_CSR_DATA_REG);
-//						  lan9252_write_32(ESC_CSR_DATA_REG,0x04030201);
-//						  ESC_read_csr(ESC_CSR_BUILD_8REG, &temp4bytes, sizeof(temp4bytes)-2);
-//						  ESC_read_csr(ESC_CSR_TYPE_8REG, &temp4bytes, sizeof(temp4bytes)-2);
-//
-//						 ESC_read_csr(ESC_CSR_AL_EVENT_MASK, &temp4bytes, sizeof(temp4bytes));
-//					  ESC_read (ESCREG_DLSTATUS, (void *) &ESC_status,
-//								sizeof (ESC_status));
-//					  ESC_status = etohs (ESC_status);
-//					  rcvdData = ESC_status;
-//
-//					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &temp4bytes,
-//					  								sizeof (temp4bytes));
-//					  ESC_read (ESC_CSR_FMMUS_OFFSET, (void *) &temp4bytes,
-//					  								sizeof (temp4bytes));
-//					  temp4bytes = etohs (temp4bytes);
-//
-//					  ESC_read (ESC_CSR_BUILD_8REG, (void *) &temp4bytes,
-//					  								sizeof (temp4bytes));
-//					  temp4bytes = etohs (temp4bytes);
-//
-//
-//					  ESC_read (ESC_CSR_TYPE_8REG, (void *) &test_2,
-//					  								sizeof (test_2));
-//					  test_2 = etohs (test_2);
-//
-//					  ESC_read (ESC_CSR_RW_ALIAS_ADDRESS, (void *) &test16,
-//					  								sizeof (test16));
-//
-//					  test16 = 0x0201;
-//					  ESC_write(ESC_CSR_RW_ALIAS_ADDRESS, &test16, sizeof(test16));
-//
-//					  ESC_read (ESC_CSR_RW_ALIAS_ADDRESS, (void *) &test16,
-//					  								sizeof (test16));
-//
-//					  ESC_read (ESC_CSR_REV_8REG, (void *) &temp4bytes,
-//													sizeof (temp4bytes));
-//					  temp4bytes = etohs (ESC_status);
-//
-//					  ESC_read (ESC_CSR_PDI_CTRL_REG-4, (void *) &test_2,
-//													sizeof (test_2));
-//					  test_2 = etohs (test_2);
-//					  ESC_read (ESC_CSR_ESC_CTRL_REG, (void *) &temp4bytes,
-//													sizeof (temp4bytes));
-//					  temp4bytes = etohs (ESC_status);
-//
-//
-//
-//
-//				   }
-					temp4bytes = lan9252_read_32(SYS_CHIP_ID_REV);
-					ecat_step = ec_idle;
-
+				//	exit
+				if (restartEcatFlag) {
+					notifyError(ERR_ECAT_TIMEOUT);
+					restartEcatFlag = FALSE;
+					ecat_step = ec_fault;
 				}
 				else {
-					ecat_step = ec_fault;
-				}
-
-
-				break;
-
-			case	ec_waitDMA:
-				osThreadYield();
-				osEventFlagsWait(evt_sysSignals, ECAT_EVENT,osFlagsWaitAny, osWaitForever);
-				//exit
-				if(ecatDMArcvd) {		//This DMA rcvd can be the full buffer finished transmiting interruption
-					ecatDMArcvd = FALSE;
-					if(ecatVerifyResp(TEST_BYTE_OFFSET) != FAILED) {
-						notifyEvent(EV_ECAT_VERIFIED);
-						ecat_step = ec_idle;
-					}	//TODO this should be improved to use a shared buffer with the data comming from SPI or something similar
-					else {
-						notifyError(ERR_ECAT_F_COMM);
-						ecat_step = ec_fault;
+					if (osTimerIsRunning(timerEcatSM)) {	//PENDING This OSTimer could overflow even when there is no timeout due to other threads allocated by the OS
+						if (osTimerStop(timerEcatSM) != osOK) {
+							notifyError(ERR_ECAT_OSTIM);
+						}
 					}
-					break;
-				} 	//TODO DMAReceived should be changed by interruption
-
-				if(timedoutEcat) {
-					notifyError(ERR_ECAT_TIMEOUT);
-					timedoutEcat = FALSE;
-					ecat_step = ec_fault;
-				} 	//The timeout callback function modifies this error flag
-				break;
-			case	ec_idle:
-				//entry
-				if (osTimerIsRunning(timeoutEcat))
-				timerStatus = osTimerStop(timeoutEcat);
-				if (timerStatus != osOK) {
-					__NOP();
-					//Handle this OS timer error
+					ecat_step = ec_connected;
 				}
-				//action
-				notifyEvent(EV_ECAT_READY);
-				//exit
-				ecat_step = ec_transmitting;
-				//osThreadResume(ecatTestTHandler);
-				osThreadResume(ecatSOESTHandler);
+					break;
+		/*--------------------------------------------------------------------------------*/
+			case	ec_waitDMA:	// This state is currently not used
+//				osThreadYield();
+//				osEventFlagsWait(evt_sysSignals, ECAT_EVENT,osFlagsWaitAny, osWaitForever);
+//
+//				//exit
+//				if(ecatDMArcvd) {		//This DMA rcvd can be the full buffer finished transmiting interruption
+//					ecatDMArcvd = FALSE;
+//					if(ecatVerifyResp(TEST_BYTE_OFFSET) != FAILED) {
+//						notifyEvent(EV_ECAT_APP_READY);
+//						ecat_step = ec_idle;
+//					}	//TODO this should be improved to use a shared buffer with the data comming from SPI or something similar
+//					else {
+//						notifyError(EV_ECAT_APP_NOK);
+//						ecat_step = ec_fault;
+//					}
+//					break;
+//				} 	//TODO DMAReceived should be changed by interruption
+//
+//				if(timedoutEcat) {
+//					notifyError(ERR_ECAT_TIMEOUT);
+//					timedoutEcat = FALSE;
+//					ecat_step = ec_fault;
+//				} 	//The timeout callback function modifies this error flag
 				break;
-			case	ec_transmitting:
-				osEventFlagsWait(evt_sysSignals, ECAT_EVENT, osFlagsWaitAll, osWaitForever);
-				ecat_step = ec_fault;		//So far the error in communication is the only event that the periodic task can generate, therefore task should by self suspended by now.
+		/*--------------------------------------------------------------------------------*/
+			case	ec_connected:
+				//	entry
+				if (firstExec) {
+					firstExec = FALSE;
+					osThreadResume(ecatSOESTHandler);
+				}
+
+				//	action
+				if (ESCvar.ALstatus == ESC_APP_OK && !escAPPok) {
+					escAPPok = TRUE;
+					osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+				}
+				else if (ESCvar.ALstatus != ESC_APP_OK && escAPPok) {
+					escAPPok = FALSE;
+					osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+				}
+
+				osDelay(1000u);	// This could be a definition
+
+				//	exit
+				if (restartEcatFlag) {
+					restartEcatFlag = FALSE;
+					notifyError(ERR_ECAT_COMM_LOST);
+					ecat_step = ec_fault;
+				}
+
 				break;
+		/*--------------------------------------------------------------------------------*/
 			case	ec_sleep:
 				__NOP();
 				osThreadSuspend(ecatSMTHandle);
 
 				break;
+		/*--------------------------------------------------------------------------------*/
 			case	ec_fault:
 				//entry
-				if (osTimerIsRunning(timeoutEcat))
-				timerStatus = osTimerStop(timeoutEcat);
-				if (timerStatus != osOK) {
-					__NOP();
-					//Handle this OS timer error
-				}
+
 				//action
-				notifyError(ERR_ECAT_F_COMM);
+				escAPPok = FALSE;
+				firstExec = FALSE;
+				osThreadTerminate(ecatSOESTHandler);
+
+				//exit
 				ecat_step = ec_restart;
 				break;
+				/*--------------------------------------------------------------------------------*/
 			case	ec_restart:
 				//action
-				ecat_deinit(&hspi4);	//PENDING AND IMPORTANT This will probably create an error as soon as the LAN9252 is disconnected and the other tasks contnue trying to send data
+
+				ecat_deinit(&hspi4);	// CHCKME whether error prompts due to shared resource
+				updateTaskManFlag = TRUE;
+				osEventFlagsSet(taskManSignals, TASKM_EVENT);	//<<Adds SOES Thread again through a higher priority system task
+				HAL_StatusTypeDef halstatus = HAL_TIM_Base_Stop_IT(&htim5);
+				osDelay(3000);		//Waits to restart the communication, meanwhile another task is assessed
 
 				//exit
 				ecat_step = ec_config;
-				osDelay(3000);		//Waits to restart the communication, meanwhile another task is attended
 				break;
 			default:
 				__NOP();
@@ -300,10 +262,21 @@ int8_t ecatVerifyResp(uint8_t reg) {
 /* *
  * @brief	This is the timeout callback function for  ECAT
  * */
-void timeoutCallback_ecat(void * argument) {
+void timeoutSMCallback_ecat(void * argument) {
 	//do something
-	timedoutEcat = FALSE;//TRUE;
-	ecatDMArcvd = TRUE;	//CHckme This is only for test purposes
-	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Chckme why is it a led event?
+	uint32_t status;
+	HAL_StatusTypeDef halstatus;
+	//status = osThreadSuspend(ecatSOESTHandler);	//<< Cannot be called within ISR
+	suspendTaskManFlag = TRUE;
+	//status = osEventFlagsSet(taskManSignals, TASKM_EVENT);
+	restartEcatFlag = TRUE;
+	halstatus = HAL_TIM_Base_Stop_IT(&htim5);
+	status = osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
 }
-
+void timeoutSOESCallback_ecat(void * argument) {
+	//do something
+	//osThreadSuspend(ecatSOESTHandler);
+	//restartEcatFlag = TRUE;
+	//osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+	__NOP();
+}

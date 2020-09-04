@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //#include "AxisCommHub_definitions.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+extern void addThreads(void);
+extern void initOwApp(void);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,6 +50,8 @@ DMA_HandleTypeDef hdma_spi4_rx;
 DMA_HandleTypeDef hdma_spi4_tx;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim8;
 DMA_HandleTypeDef hdma_tim3_ch2;
 DMA_HandleTypeDef hdma_tim8_ch1;
@@ -61,7 +66,7 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
-
+extern void timeoutSMCallback_ecat(void * argument);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,11 +76,13 @@ static void MX_DMA_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_SPI4_Init(void);
 static void MX_TIM8_Init(void);
+static void MX_TIM4_Init(void);
+static void MX_TIM5_Init(void);
 static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+uint32_t tempmain=0;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -115,8 +122,18 @@ int main(void)
   MX_TIM3_Init();
   MX_SPI4_Init();
   MX_TIM8_Init();
+  MX_TIM4_Init();
+  MX_TIM5_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_StatusTypeDef status;
+  //status = HAL_TIM_Base_Start(&htim4);
+  //HAL_TIM_Base_Stop(&htim5);
+  __HAL_TIM_CLEAR_IT(&htim5,TIM_IT_UPDATE);
+  //__HAL_TIM_CLEAR_FLAG(&htim5,TIM_FLAG_UPDATE);
+  htim5.Instance->CNT = 0;
+
+
 
   /* USER CODE END 2 */
 
@@ -145,16 +162,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  printf("Initializing\n");
-
-  // Linking mxCube functions to library functions
-  //initCH1ptr = MX_TIM8_Init;
-  //initCH1ptr = MX_TIM3_Init;
-  //deInitCHxptr = HAL_TIM_Base_DeInit;
-
   addThreads();
-  initOwApp();
-  //goTest();
+  //initOwApp();
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -310,6 +319,96 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 1000;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 0;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 8000;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 50000;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
@@ -557,7 +656,15 @@ void StartDefaultTask(void *argument)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+	if (htim->Instance == TIM4) {
+		uint8_t temp =0;
+		temp++;
+	}
+	if (htim->Instance == TIM5) {
+		uint8_t temp =0;
+		temp++;
+		timeoutSMCallback_ecat(NULL);
+	}
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM10) {
     HAL_IncTick();

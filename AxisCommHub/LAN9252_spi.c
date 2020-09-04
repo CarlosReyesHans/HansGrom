@@ -43,7 +43,7 @@ const osThreadAttr_t ecatInitT_attributes = {
 		.stack_size = sizeof(ecatInitTBuffer),
 		.cb_mem = &ecatInitTControlBlock,
 		.cb_size = sizeof(ecatInitTControlBlock),
-		.priority = (osPriority_t) osPriorityAboveNormal,
+		.priority = (osPriority_t) osPriorityNone,
 };
 
 

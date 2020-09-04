@@ -31,7 +31,7 @@ void eventH_SM (void * argument) {
 					evH_step = evH_reportErr;
 					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				else {
-					ecat_step = evH_notifyEv;
+					evH_step = evH_notifyEv;
 				}
 
 				break;
@@ -93,11 +93,11 @@ void notifyError(uint8_t error) {
 	errorFlag = TRUE;
 	//osEventFlagsSet(evt_sysSignals, SYS_EVENT);	//Pending
 
-	if (error == ERR_ECAT_F_COMM) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
-		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
-		notificationFlag = TRUE;
-		osEventFlagsSet(evt_sysSignals, LED_EVENT);
-	}
+//	if (error == ERR_ECAT_F_COMM) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
+//		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
+//		notificationFlag = TRUE;
+//		osEventFlagsSet(evt_sysSignals, LED_EVENT);
+//	}
 }
 
 /* *
@@ -109,11 +109,11 @@ void notifyError(uint8_t error) {
 void notifyEvent(uint8_t event) {
 	notificationFlag= TRUE;
 	osEventFlagsSet(evt_sysSignals, SYS_EVENT);
-	if (event == EV_ECAT_READY) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
-		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
-		errorFlag = FALSE;
-		osEventFlagsSet(evt_sysSignals, LED_EVENT);
-	}
+//	if (event == EV_ECAT_READY) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
+//		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
+//		errorFlag = FALSE;
+//		osEventFlagsSet(evt_sysSignals, LED_EVENT);
+//	}
 }
 
 

@@ -11,6 +11,9 @@
 
 osTimerId_t refreshLed,timeoutLed;	//Pending: this could be local or static
 static volatile uint8_t boolTimeoutLed,boolRefreshTimeoutLed;	//PEnding is this necessary?
+//	Debug variables
+volatile uint32_t currentFlags1,currentFlags2;
+
 
 //External variables
 extern TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Declared in WS2812 Libraries
@@ -96,10 +99,13 @@ void ledRings_SM (void * argument) {
 				//	exit
 
 				if (boolTimeoutLed) {
-					if (osTimerStop(timeoutLed) != osOK) {
-						__NOP();//Handle internal OS  error
-						notifyError(ERR_LED_OSTIM);
+					if (osTimerIsRunning(timeoutLed)){
+						if (osTimerStop(timeoutLed) != osOK) {
+							__NOP();//Handle internal OS  error
+							notifyError(ERR_LED_OSTIM);
+						}
 					}
+
 					boolTimeoutLed = FALSE;
 					notifyError(ERR_LED_TIMEOUT);
 					led_step = L_restart;
@@ -163,7 +169,7 @@ void ledRings_SM (void * argument) {
 					break;
 				}
 				//
-
+				uint32_t eventStatus = osEventFlagsGet(evt_sysSignals);
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 
 				//exit
@@ -257,6 +263,7 @@ void timeoutCallback_led(void * argument) {
 	//do something
 	boolTimeoutLed = TRUE;
 	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
+	currentFlags1 = osEventFlagsGet(evt_sysSignals);
 }
 
 /* *
@@ -265,8 +272,10 @@ void timeoutCallback_led(void * argument) {
 
 void refreshCallback_led(void * argument) {
 	//do something
+	uint32_t eventstatus;
 	boolRefreshTimeoutLed = TRUE;
-	osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
+	eventstatus = osEventFlagsSet(evt_sysSignals, LED_EVENT); //Will this be a race condition with the DMA?
+	currentFlags2 = osEventFlagsGet(evt_sysSignals);
 }
 
 /**

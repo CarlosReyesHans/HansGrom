@@ -30,7 +30,7 @@
 #define SOES_REFRESH_CYCLE		20u		//in Systicks
 
 
-//	Declaration of errors	//TODO There should be the variable that will have the listed values, but it will be different than the osEventFlag which is only general
+//	Declaration of errors
 #define	ERR_SENSOR_INIT		10
 #define ERR_SENSOR_LOST		11
 #define ERR_SENSOR_TIMEOUT	12
@@ -39,17 +39,26 @@
 #define ERR_LED_SEND		22
 #define	ERR_LED_OSTIM		23
 #define	ERR_ECAT_INIT		30
-#define ERR_ECAT_F_COMM		31
+#define ERR_ECAT_COMM_LOST		31
 #define ERR_ECAT_TIMEOUT	32
+#define ERR_ECAT_OSTIM		33
 
 //	Definition of internal events
-#define EV_ECAT_VERIFIED	30
-#define EV_ECAT_READY		31
+#define EV_ECAT_ESC_INIT	30
+#define EV_ECAT_APP_READY	31
+#define EV_ECAT_APP_NOK		32
 
-#define SYS_EVENT			100
-#define LED_EVENT			120
-#define TSENS_EVENT			130
-#define ECAT_EVENT			140
+#define SYS_EVENT			(1<<0)
+#define LED_EVENT			(1<<1)
+#define TSENS_EVENT			(1<<2)
+#define ECAT_EVENT			(1<<3)
+#define	TASKM_EVENT			(1<<4)
+
+//	Definition of specific timeouts
+//	ECAT/SOES
+#define	ESC_INIT_TIMEOUT	4000lu
+#define	ESC_REFRESH_TIMEOUT	10000lu
+
 
 //	Auxiliar definitions for HAL adaptation
 

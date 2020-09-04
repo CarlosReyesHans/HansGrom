@@ -29,7 +29,7 @@ DMA_HandleTypeDef *dmaCH1,*dmaCH2,*dmaCH3,*dmaCH4;
 
 
 /*-------------------------------------------------Extern variables from other SMs-------------------------------------------------------------*/
-extern osEventFlagsId_t evt_sysSignals;
+extern volatile osEventFlagsId_t evt_sysSignals;
 
 
 

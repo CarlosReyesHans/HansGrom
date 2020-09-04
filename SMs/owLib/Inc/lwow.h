@@ -36,7 +36,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "lwow_opt.h"
+#include <lwow_opt.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,13 +24,17 @@
 #include "bootstrap.h"
 
 
-//#include "main.h"
 
 
+// Variables needed for synchronization with SMs
+
+extern osTimerId_t timerEcatSOES;
+extern osEventFlagsId_t evt_sysSignals;
+extern TIM_HandleTypeDef htim5;		//From main.c
 
 //External global variables
 extern int16_t	gv_temperatureData[NUM_OF_SENSORS];		//	Declared in SMs.c
-
+extern osThreadId_t ecatSOESTHandler;
 /* Application variables */
 _Rbuffer    Rb;
 _Wbuffer    Wb;
@@ -123,7 +127,7 @@ void post_object_download_hook (uint16_t index, uint8_t subindex,
 
 void soes (void * arg)
 {
-	uint32_t time2soes;
+	uint32_t time2soes = 0;
 
 
    /* Setup config hooks */
@@ -148,8 +152,12 @@ void soes (void * arg)
    };
 
    ecat_slv_init (&config);
+   HAL_TIM_Base_Stop_IT(&htim5);
+   osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM
    //	Starting soes app timing
    time2soes = osKernelGetTickCount();
+   //osTimerStart(timerEcatSOES, (uint32_t)ESC_REFRESH_TIMEOUT);
    //time2soes += SOES_REFRESH_CYCLE;
    //osDelayUntil(time2soes);
 
@@ -159,10 +167,11 @@ void soes (void * arg)
 
 	   //time2soes += SOES_REFRESH_CYCLE;
 	   ecat_slv();
-
+	   //osTimerStop(timerEcatSOES);
 	   //	exit
 	   //osDelayUntil(time2soes);
 	   osDelay(SOES_REFRESH_CYCLE);
+	   //osTimerStart(timerEcatSOES, (uint32_t)ESC_REFRESH_TIMEOUT);
 	   // PENDING This could be set with osEventsWait(Any flag comming from SMs)
 
    }

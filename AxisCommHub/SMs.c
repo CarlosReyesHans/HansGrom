@@ -9,9 +9,10 @@
 
 #include "AxisCommHub_definitions.h"
 #include "SMs.h"
+#include "smEcat.h"
 
 
-
+extern osTimerId_t timerEcatSM,timerEcatSOES;
 
 /*-----------------------------------------------TASKS for SMs--------------------------------------------------------------*/
 // Add the handlers of the tasks within the SMs.h
@@ -88,7 +89,7 @@ const osThreadAttr_t ecatTestT_Attributes = {
 		.stack_size = sizeof(ecatTestTBuffer),
 		.cb_mem = &ecatTestTControlBlock,
 		.cb_size = sizeof(ecatTestTControlBlock),
-		.priority = (osPriority_t) osPriorityHigh1,
+		.priority = (osPriority_t) osPriorityHigh3,
 };
 
 uint32_t ecatSOESTBuffer[1088];
@@ -99,7 +100,7 @@ const osThreadAttr_t ecatSOEST_Attrbuttes = {
 		.stack_size = sizeof(ecatSOESTBuffer),
 		.cb_mem = &ecatSOESTControlBlock,
 		.cb_size = sizeof(ecatSOESTControlBlock),
-		.priority = (osPriority_t) osPriorityHigh1,
+		.priority = (osPriority_t) osPriorityHigh2,
 };
 
 /*----------------------System Monitor--------------------------------*/
@@ -113,7 +114,7 @@ const osThreadAttr_t taskManagerT_Attributes = {
 		.stack_size = sizeof(taskManagerTBuffer),
 		.cb_mem = &taskManagerTControlBlock,
 		.cb_size = sizeof(taskManagerTControlBlock),
-		.priority = (osPriority_t) osPriorityHigh,
+		.priority = (osPriority_t) osPriorityRealtime,
 };
 
 
@@ -299,8 +300,19 @@ void tempSens_SM (void * argument) {
  * */
 
 void taskManger(void * argument) {
+		timerEcatSM = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
+		timerEcatSOES = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
 
 	while (1) {
+		if (updateTaskManFlag) {
+			updateTaskManFlag = FALSE;
+			ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
+			osThreadSuspend(ecatSOESTHandler);
+		}
+		else if (suspendTaskManFlag) {
+			suspendTaskManFlag = FALSE;
+			osThreadSuspend(ecatSOESTHandler);
+		}
 		status_ecatTestT = osThreadGetState(ecatTestTHandler);
 		status_ecatT = osThreadGetState(ecatSMTHandle);
 		status_ecatSOEST = osThreadGetState(ecatSOESTHandler);
@@ -309,8 +321,9 @@ void taskManger(void * argument) {
 		status_tSensT = osThreadGetState(tempSensTHandle);
 		status_ledsT = osThreadGetState(ledRingsTHandle);
 		status_taskMT = osThreadGetState(taskManagerTHandler);
-		osThreadYield();	//Yield to any other thread that may be ready
-		osDelay(1);			//1ms update rate
+		//osThreadYield();	//Yield to any other thread that may be ready
+		osDelay(1000);			//1ms update rate
+		//osEventFlagsWait(taskManSignals, TASKM_EVENT,osFlagsWaitAny , osWaitForever);
 	}
 
 	//osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
@@ -416,6 +429,11 @@ void uartUpdt (void * argument) {
 void addThreads(void) {
 	evt_sysSignals = osEventFlagsNew(NULL);
 	if (evt_sysSignals == NULL){
+		//Handle error
+		__NOP();
+	}
+	taskManSignals = osEventFlagsNew(NULL);
+	if (taskManSignals == NULL){
 		//Handle error
 		__NOP();
 	}
