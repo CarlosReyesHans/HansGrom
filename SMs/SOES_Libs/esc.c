@@ -1134,7 +1134,7 @@ void ESC_state (void)
    }
 
    ESC_ALstatus (an);
-   DPRINT ("state %x\n", an);
+   //DPRINT ("state %x\n", an);
 }
 /** Function copying the application configuration variable
  * data to the stack local variable.

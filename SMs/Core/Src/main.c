@@ -163,7 +163,6 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   addThreads();
-  //initOwApp();
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -623,7 +622,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* *
+ * @brief	This function helps debug the code over uart
+ * */
 
+int _write(int file, char *ptr, int len){
+	int i=0;
+	for (i=0; i<len; i++){
+		ITM_SendChar((*ptr++));
+	}
+	return len;
+}
 
 /* USER CODE END 4 */
 
@@ -663,7 +672,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if (htim->Instance == TIM5) {
 		uint8_t temp =0;
 		temp++;
-		timeoutSMCallback_ecat(NULL);
+		//timeoutSMCallback_ecat(NULL);
 	}
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM10) {

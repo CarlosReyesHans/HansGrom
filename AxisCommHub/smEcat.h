@@ -18,6 +18,7 @@ int8_t ecatVerifyResp(uint8_t reg);
 
 void timeoutSMCallback_ecat(void * argument);
 void timeoutSOESCallback_ecat(void * argument);
+void timeoutSOESCallback(void * argument);
 
 /*-------------------------------------This functions are to be reviewed-------------------------------------------*/
 //TODO

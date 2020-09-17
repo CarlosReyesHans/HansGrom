@@ -44,9 +44,13 @@
 #define ERR_ECAT_OSTIM		33
 
 //	Definition of internal events
-#define EV_ECAT_ESC_INIT	30
-#define EV_ECAT_APP_READY	31
-#define EV_ECAT_APP_NOK		32
+#define EV_ECAT_ESC_INIT	(1<<10)
+#define EV_ECAT_APP_OP	(1<<11)
+#define EV_ECAT_APP_INIT		(1<<12)
+#define EV_ECAT_APP_NOK			(1<<13)
+#define EV_ECAT_ESC_CONN_LOST		(1<<14)
+#define EV_SOES_RESPAWNED		(1<<15)
+
 
 #define SYS_EVENT			(1<<0)
 #define LED_EVENT			(1<<1)
@@ -56,9 +60,12 @@
 
 //	Definition of specific timeouts
 //	ECAT/SOES
-#define	ESC_INIT_TIMEOUT	4000lu
-#define	ESC_REFRESH_TIMEOUT	10000lu
+#define	ESC_INIT_TIMEOUT	5u
+#define	ESC_REFRESH_TIMEOUT	10000u
 
+//	Definitions of ETHERCAT STATE MACHINE
+//	See esc.h for ALstatus Reg
+//	e.g. ESCop
 
 //	Auxiliar definitions for HAL adaptation
 

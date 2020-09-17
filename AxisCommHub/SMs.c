@@ -100,13 +100,13 @@ const osThreadAttr_t ecatSOEST_Attrbuttes = {
 		.stack_size = sizeof(ecatSOESTBuffer),
 		.cb_mem = &ecatSOESTControlBlock,
 		.cb_size = sizeof(ecatSOESTControlBlock),
-		.priority = (osPriority_t) osPriorityHigh2,
+		.priority = (osPriority_t) osPriorityAboveNormal,
 };
 
 /*----------------------System Monitor--------------------------------*/
 
 
-uint32_t taskManagerTBuffer[ 128 ];
+uint32_t taskManagerTBuffer[ 192 ];
 StaticTask_t taskManagerTControlBlock;
 const osThreadAttr_t taskManagerT_Attributes = {
 		.name = "taskManagerT",
@@ -114,7 +114,7 @@ const osThreadAttr_t taskManagerT_Attributes = {
 		.stack_size = sizeof(taskManagerTBuffer),
 		.cb_mem = &taskManagerTControlBlock,
 		.cb_size = sizeof(taskManagerTControlBlock),
-		.priority = (osPriority_t) osPriorityRealtime,
+		.priority = (osPriority_t) osPriorityHigh,
 };
 
 
@@ -140,7 +140,7 @@ const osThreadAttr_t taskManagerT_Attributes = {
 
 
 /******************************************* eCAT Space *********************************************************************/
-#define TEST_BYTE	0x00	//PENDING Delete if not longer needed
+
 
 
 /******************************************* Extern Variables from LED Rings Multichannel *********************************************************************/
@@ -177,6 +177,7 @@ volatile uint8_t DMAreceived, timedOut;	//TODO DMAReceived should be changed by 
 
 /******************************************* Variables to debug ****************************************************************/
 osStatus_t static ecatStatus,uartPrintStatus;
+uint32_t *heapObserver0,*heapObserver1,*heapObserver2;
 
 /*************************************** Var task manager ***********************************************************/
 static osThreadState_t status_ecatTestT, status_ecatT, status_evHT,status_uartPT,status_tSensT,status_ledsT, status_taskMT,status_ecatSOEST;
@@ -300,30 +301,33 @@ void tempSens_SM (void * argument) {
  * */
 
 void taskManger(void * argument) {
-		timerEcatSM = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
-		timerEcatSOES = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
 
+	osStatus_t status;
 	while (1) {
-		if (updateTaskManFlag) {
-			updateTaskManFlag = FALSE;
-			ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
-			osThreadSuspend(ecatSOESTHandler);
+		if (restartTaskManFlag) {
+			restartTaskManFlag = FALSE;
+			osDelay(100);
+			status = osThreadSuspend(ecatSOESTHandler);
+			//status = osThreadTerminate(ecatSOESTHandler);
+			//ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
+			//status = osThreadSuspend(ecatSOESTHandler);
+			osEventFlagsSet(evt_sysSignals, TASKM_EVENT|EV_SOES_RESPAWNED);
 		}
-		else if (suspendTaskManFlag) {
-			suspendTaskManFlag = FALSE;
-			osThreadSuspend(ecatSOESTHandler);
-		}
+
 		status_ecatTestT = osThreadGetState(ecatTestTHandler);
 		status_ecatT = osThreadGetState(ecatSMTHandle);
+		status_ecatSOEST = osThreadGetState(ecatSOESTHandler);
+
+		//osThreadYield();	//Yield to any other thread that may be ready
+		//osDelay(1000);			//1ms update rate
+		osEventFlagsWait(taskManSignals, TASKM_EVENT,osFlagsWaitAny , osWaitForever);
+
 		status_ecatSOEST = osThreadGetState(ecatSOESTHandler);
 		status_evHT = osThreadGetState(eventHTHandle);
 		status_uartPT = osThreadGetState(uartPrintTHandler);
 		status_tSensT = osThreadGetState(tempSensTHandle);
 		status_ledsT = osThreadGetState(ledRingsTHandle);
 		status_taskMT = osThreadGetState(taskManagerTHandler);
-		//osThreadYield();	//Yield to any other thread that may be ready
-		osDelay(1000);			//1ms update rate
-		//osEventFlagsWait(taskManSignals, TASKM_EVENT,osFlagsWaitAny , osWaitForever);
 	}
 
 	//osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
@@ -438,6 +442,9 @@ void addThreads(void) {
 		__NOP();
 	}
 
+	heapObserver0 = evt_sysSignals;
+	heapObserver1 = taskManSignals;
+
 	//	Initializing main threads
 	tempSensTHandle = osThreadNew(tempSens_SM, NULL, &tempSensT_attributes);
 	ledRingsTHandle = osThreadNew(ledRings_SM, NULL, &ledRingsT_attributes);
@@ -445,12 +452,10 @@ void addThreads(void) {
 	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
 
 	//	Auxiliar tasks
-	//ecatTestTHandler = osThreadNew(ecatUpdt, NULL, &ecatTestT_Attributes);
+
 	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
-	//uartPrintTHandler = osThreadNew(uartUpdt, NULL, &uartPrintT_Attributes);
 	ecatStatus = osThreadSuspend(ecatSOESTHandler);
-	ecatStatus = osThreadSuspend(ecatTestTHandler);
-	uartPrintStatus = osThreadSuspend(uartPrintTHandler);
+
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
 	//Debug tasks
@@ -459,14 +464,5 @@ void addThreads(void) {
 
 
 
-/* *
- * @brief	This function helps debug the code over uart
- * */
 
-int _write(int file, char *ptr, int len){
-	int i=0;
-	for (i=0; i<len; i++){
-		ITM_SendChar((*ptr++));
-	}
-	return len;
-}
+

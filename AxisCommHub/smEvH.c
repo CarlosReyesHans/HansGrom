@@ -9,6 +9,10 @@
 #include "SMs.h"
 #include "smEvH.h"
 
+
+//External variables
+
+
 /*
  * @brief Sate Machine for error/event handler
  *
@@ -17,6 +21,7 @@
 void eventH_SM (void * argument) {
 
 	uint32_t flag;	//CHCKME whether this is needed
+
 	//enum enum_events eventType;
 
 	while(1) {		//Infinite loop enforced by task execution
@@ -26,6 +31,8 @@ void eventH_SM (void * argument) {
 //				if (!(notificationFlag && errorFlag))	//TODO this should be actually a queue
 //					osThreadSuspend(eventHTHandle);	//TODO assume that after this instruction the task is changed by scheduler, so next time it is called is due to and event.
 				flag = osEventFlagsWait(evt_sysSignals, SYS_EVENT, osFlagsWaitAny, osWaitForever);
+
+
 				//exit
 				if (errorFlag) {
 					evH_step = evH_reportErr;
@@ -108,7 +115,7 @@ void notifyError(uint8_t error) {
  * */
 void notifyEvent(uint8_t event) {
 	notificationFlag= TRUE;
-	osEventFlagsSet(evt_sysSignals, SYS_EVENT);
+//	osEventFlagsSet(evt_sysSignals, SYS_EVENT);
 //	if (event == EV_ECAT_READY) {			//TODO	This is temporary to bypass Event Handler but test the Ecat SM
 //		//	This handling depending on the arg error, the creation of the signal and the set of notification flag should be optimized within the event handler
 //		errorFlag = FALSE;

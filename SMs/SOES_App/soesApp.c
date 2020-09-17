@@ -1,5 +1,5 @@
 /*
- * sampleApp.c
+ * soesApp.c
  *
  *  Created on: Jul 16, 2020
  *      Author: CarlosReyes
@@ -23,18 +23,23 @@
 //#include "bsp.h"			// << BSAP compatibility already included in the main file, stm32f446ze
 #include "bootstrap.h"
 
+//include for testing
+#include "smEcat.h"
 
+//	Variables needed for SOES SM
+enum enum_soesStates {s_start,s_init1,s_init2,s_timerset,s_slaveloop,s_sleep,s_nostep,s_error}soes_step;
 
-
-// Variables needed for synchronization with SMs
-
+//	Variables needed for synchronization with SMs
 extern osTimerId_t timerEcatSOES;
-extern osEventFlagsId_t evt_sysSignals;
-extern TIM_HandleTypeDef htim5;		//From main.c
+osTimerId_t timerSOES;
+extern volatile osEventFlagsId_t evt_sysSignals,taskManSignals;
+extern uint32_t *heapObserver0,*heapObserver1,*heapObserver2;
 
-//External global variables
+//	External global variables
 extern int16_t	gv_temperatureData[NUM_OF_SENSORS];		//	Declared in SMs.c
 extern osThreadId_t ecatSOESTHandler;
+
+
 /* Application variables */
 _Rbuffer    Rb;
 _Wbuffer    Wb;
@@ -128,7 +133,8 @@ void post_object_download_hook (uint16_t index, uint8_t subindex,
 void soes (void * arg)
 {
 	uint32_t time2soes = 0;
-
+	osStatus_t timerStatus;
+	uint32_t argument;
 
    /* Setup config hooks */
    static esc_cfg_t config =
@@ -150,14 +156,37 @@ void soes (void * arg)
       .esc_hw_interrupt_disable = NULL,
       .esc_hw_eep_handler = NULL
    };
+   //	Init1
+   argument = 1u;
+   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
+   if (timerSOES == NULL) {
+	   __NOP();	//Handle error
+   }
+   heapObserver1 = timerSOES;
+
+   timerStatus = osTimerStart(timerSOES, 1000u);
+   if (timerStatus != osOK) {
+	   __NOP();		//Handle error
+   }
 
    ecat_slv_init (&config);
-   HAL_TIM_Base_Stop_IT(&htim5);
-   osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
-   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM
+
+   if(osTimerIsRunning(timerSOES)) {
+	   timerStatus = osTimerStop(timerSOES);
+	   timerStatus = osTimerDelete(timerSOES);
+	   if (timerStatus != osOK)
+		   __NOP();	//Handle error
+   }
+
+
+   osEventFlagsSet(evt_sysSignals, ECAT_EVENT|EV_ECAT_ESC_INIT);	//TODO << Check with heap observer that two flags are set
+   // 	Init2
+   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM in State: Connected
+
    //	Starting soes app timing
    time2soes = osKernelGetTickCount();
-   //osTimerStart(timerEcatSOES, (uint32_t)ESC_REFRESH_TIMEOUT);
+   argument = 2u;
+   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
    //time2soes += SOES_REFRESH_CYCLE;
    //osDelayUntil(time2soes);
 
@@ -165,14 +194,23 @@ void soes (void * arg)
    {
 	   //	action
 
+	   if (timerSOES == NULL) {
+		   __NOP();	//Handle error
+	   }
+	   osTimerStart(timerSOES, 1000u);
 	   //time2soes += SOES_REFRESH_CYCLE;
 	   ecat_slv();
-	   //osTimerStop(timerEcatSOES);
+
+	   if(osTimerIsRunning(timerSOES)) {
+		   timerStatus = osTimerStop(timerSOES);
+		   if (timerStatus != osOK)
+			   __NOP();	//Handle error
+	   }
+
 	   //	exit
 	   //osDelayUntil(time2soes);
 	   osDelay(SOES_REFRESH_CYCLE);
-	   //osTimerStart(timerEcatSOES, (uint32_t)ESC_REFRESH_TIMEOUT);
-	   // PENDING This could be set with osEventsWait(Any flag comming from SMs)
+	   // This could be improved usign delay till os function
 
    }
 }

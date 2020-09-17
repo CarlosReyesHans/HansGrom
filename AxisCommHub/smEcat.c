@@ -13,9 +13,11 @@
 
 
 /*--------------------Variable used specially in this SM-----------------------------------------------------*/
-osTimerId_t timerEcatSM,timerEcatSOES;	//PEnding this could be local or static?
-static volatile uint8_t timedoutEcat,restartEcatFlag;
+
+volatile uint8_t timedoutEcat,restartEcatFlag;
 static uint8_t escAPPok;
+osTimerId_t timerEcatSOES; // << This is used by SOES library
+
 
 /*---------------------------Variables needed by SOES Application---------------------------*/
 
@@ -43,10 +45,14 @@ void ecat_SM (void * argument) {
 	uint8_t error = 0;
 	uint8_t firstExec = 1;
 	uint32_t rcvdData;
-	osStatus_t timerStatus;
 
-//	timerEcatSM = osTimerNew(timeoutSMCallback_ecat, osTimerPeriodic, NULL, NULL);
-//	timerEcatSOES = osTimerNew(timeoutSOESCallback_ecat, osTimerPeriodic, NULL, NULL);
+	osStatus_t timerStatus;
+	osTimerId_t timerEcatSM,timerEcatSM2;//timerEcatSOES;
+	uint32_t timerDelay;
+	timerEcatSOES = osTimerNew(timeoutSMCallback_ecat, osTimerOnce, NULL, NULL);
+	//timerEcatSM = osTimerNew(timeoutSMCallback_ecat, osTimerOnce, NULL, NULL);
+	//timerEcatSM2 = osTimerNew(timeoutSMCallback_ecat, osTimerOnce, NULL, NULL);
+
 
 	if (timerEcatSM == NULL) {
 		__NOP();	//Handle the problem of creating the timer
@@ -77,20 +83,24 @@ void ecat_SM (void * argument) {
 		/*--------------------------------------------------------------------------------*/
 			case	ec_checkConnection:
 				//	action
-				if(osTimerStart(timerEcatSM, (uint32_t)30) != osOK) {
-					__NOP(); //	Handle this error
-				}
-				osStatus_t timerStatus;
-				timerStatus = osTimerStart(timerEcatSM, (uint32_t) 1000U);	//Timeout for DMA
-				if (timerStatus != osOK) {
-					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
-				}
-				HAL_StatusTypeDef status;
-				htim5.Instance->CNT = 0;
-				status = HAL_TIM_Base_Start_IT(&htim5);
-				osThreadResume(ecatSOESTHandler);	//>> SOES SM starts
-				if(!restartEcatFlag)	//Temporary
-					osEventFlagsWait(evt_sysSignals,ECAT_EVENT, osFlagsWaitAny, osWaitForever);
+//				timerDelay = 40u;
+//				timerStatus = osTimerStart(timerEcatSM, timerDelay);	//Timeout for SOES
+//				if (timerStatus != osOK) {
+//					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
+//				}
+//				timerDelay = 30u;
+//				timerStatus = osTimerStart(timerEcatSOES, timerDelay);	//Timeout for SOES
+//				if (timerStatus != osOK) {
+//					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
+//				}
+//				timerDelay = 100u;
+//				timerStatus = osTimerStart(timerEcatSM2, timerDelay);	//Timeout for SOES
+//				if (timerStatus != osOK) {
+//					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
+//				}
+
+				osThreadResume(ecatSOESTHandler);	//>> SOES SM starts with higher priority
+				osEventFlagsWait(evt_sysSignals,ECAT_EVENT, osFlagsWaitAny, osWaitForever);
 
 				//	exit
 				if (restartEcatFlag) {
@@ -99,11 +109,11 @@ void ecat_SM (void * argument) {
 					ecat_step = ec_fault;
 				}
 				else {
-					if (osTimerIsRunning(timerEcatSM)) {	//PENDING This OSTimer could overflow even when there is no timeout due to other threads allocated by the OS
-						if (osTimerStop(timerEcatSM) != osOK) {
-							notifyError(ERR_ECAT_OSTIM);
-						}
-					}
+//					if (osTimerIsRunning(timerEcatSOES)) {	//PENDING This OSTimer could overflow even when there is no timeout due to other threads allocated by the OS
+//						if (osTimerStop(timerEcatSOES) != osOK) {
+//							notifyError(ERR_ECAT_OSTIM);
+//						}
+//					}
 					ecat_step = ec_connected;
 				}
 					break;
@@ -145,17 +155,20 @@ void ecat_SM (void * argument) {
 					escAPPok = TRUE;
 					osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
 				}
-				else if (ESCvar.ALstatus != ESC_APP_OK && escAPPok) {
-					escAPPok = FALSE;
-					osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+				else if((ESCvar.ALstatus & ESCop)&&!escAPPok){
+					escAPPok = TRUE;
+					notifyEvent((uint8_t)EV_ECAT_APP_OP);
+				}
+				else if((ESCvar.ALstatus & ESCinit)&&!escAPPok){
+					notifyEvent((uint8_t)EV_ECAT_APP_NOK);
 				}
 
-				osDelay(1000u);	// This could be a definition
+				osDelay(500u);	// This could be a definition
 
 				//	exit
 				if (restartEcatFlag) {
 					restartEcatFlag = FALSE;
-					notifyError(ERR_ECAT_COMM_LOST);
+					//notifyError(ERR_ECAT_COMM_LOST);
 					ecat_step = ec_fault;
 				}
 
@@ -173,8 +186,8 @@ void ecat_SM (void * argument) {
 				//action
 				escAPPok = FALSE;
 				firstExec = FALSE;
-				osThreadTerminate(ecatSOESTHandler);
-
+				//Task manager should have restarted the SOES Thread
+				//osEventFlagsWait(evt_sysSignals,TASKM_EVENT|EV_SOES_RESPAWNED, osFlagsWaitAny, osWaitForever);
 				//exit
 				ecat_step = ec_restart;
 				break;
@@ -183,9 +196,9 @@ void ecat_SM (void * argument) {
 				//action
 
 				ecat_deinit(&hspi4);	// CHCKME whether error prompts due to shared resource
-				updateTaskManFlag = TRUE;
-				osEventFlagsSet(taskManSignals, TASKM_EVENT);	//<<Adds SOES Thread again through a higher priority system task
-				HAL_StatusTypeDef halstatus = HAL_TIM_Base_Stop_IT(&htim5);
+				//updateTaskManFlag = TRUE;
+				//osEventFlagsSet(taskManSignals, TASKM_EVENT);	//<<Adds SOES Thread again through a higher priority system task
+				//HAL_StatusTypeDef halstatus = HAL_TIM_Base_Stop_IT(&htim5);
 				osDelay(3000);		//Waits to restart the communication, meanwhile another task is assessed
 
 				//exit
@@ -267,16 +280,37 @@ void timeoutSMCallback_ecat(void * argument) {
 	uint32_t status;
 	HAL_StatusTypeDef halstatus;
 	//status = osThreadSuspend(ecatSOESTHandler);	//<< Cannot be called within ISR
-	suspendTaskManFlag = TRUE;
+	//suspendTaskManFlag = TRUE;
 	//status = osEventFlagsSet(taskManSignals, TASKM_EVENT);
-	restartEcatFlag = TRUE;
+	//restartEcatFlag = TRUE;
 	halstatus = HAL_TIM_Base_Stop_IT(&htim5);
-	status = osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+//	status = osEventFlagsSet(evt_sysSignals, SYS_EVENT);
 }
 void timeoutSOESCallback_ecat(void * argument) {
 	//do something
 	//osThreadSuspend(ecatSOESTHandler);
-	//restartEcatFlag = TRUE;
-	//osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+	restartEcatFlag = TRUE;
+	//osEventFlagsSet(taskManSignals, TASKM_EVENT);
 	__NOP();
+}
+
+/* *
+ * @brief	This is the timeout callback function specially for SOES. The timers are oneshot, no need for stop them.
+ * 				This way the queues are not overflown.
+ * */
+void timeoutSOESCallback(void * argument) {
+	uint32_t status,test;
+	test = *(uint32_t *)argument;
+	if(test == 1) {
+		__NOP();	//Timeout in init
+		//Notify event
+	}
+	else {
+		__NOP();	//Timeout while communicating
+		//Notify event
+	}
+	restartEcatFlag = TRUE;		//Flag for taskmanager should be before flag is set.
+	restartTaskManFlag = TRUE;
+	//status = osEventFlagsSet(taskManSignals, TASKM_EVENT);
+
 }

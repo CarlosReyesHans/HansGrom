@@ -20,6 +20,10 @@ _SMmap      SMmap2[MAX_MAPPINGS_SM2];
 _SMmap      SMmap3[MAX_MAPPINGS_SM3];
 _ESCvar     ESCvar;
 
+
+/*temporal extern*/
+extern volatile uint8_t timedoutEcat,restartEcatFlag;
+
 /* Private variables */
 static volatile int watchdog;
 
@@ -91,7 +95,7 @@ void ESC_objecthandler (uint16_t index, uint8_t subindex, uint16_t flags)
  */
 void APP_safeoutput (void)
 {
-   DPRINT ("APP_safeoutput\n");
+   //DPRINT ("APP_safeoutput\n");
 
    if(ESCvar.safeoutput_override != NULL)
    {
@@ -162,7 +166,7 @@ void DIG_process (uint8_t flags)
       if ((CC_ATOMIC_GET(watchdog) <= 0) &&
           ((CC_ATOMIC_GET(ESCvar.App.state) & APPSTATE_OUTPUT) > 0))
       {
-         DPRINT("DIG_process watchdog expired\n");
+         //DPRINT("DIG_process watchdog expired\n");
          ESC_ALstatusgotoerror((ESCsafeop | ESCerror), ALERR_WATCHDOG);
       }
       else if(((CC_ATOMIC_GET(ESCvar.App.state) & APPSTATE_OUTPUT) == 0))
@@ -296,6 +300,7 @@ void ecat_slv_poll (void)
  */
 void ecat_slv (void)
 {
+
    ecat_slv_poll();
    DIG_process(DIG_PROCESS_WD_FLAG | DIG_PROCESS_OUTPUTS_FLAG |
          DIG_PROCESS_APP_HOOK_FLAG | DIG_PROCESS_INPUTS_FLAG);
@@ -306,7 +311,7 @@ void ecat_slv (void)
  */
 void ecat_slv_init (esc_cfg_t * config)
 {
-   DPRINT ("Slave stack init started\n");
+   //DPRINT ("Slave stack init started\n");
 
    /* Init watchdog */
    watchdog = config->watchdog_cnt;
@@ -323,6 +328,9 @@ void ecat_slv_init (esc_cfg_t * config)
       ESC_read (ESCREG_DLSTATUS, (void *) &ESCvar.DLstatus,
                 sizeof (ESCvar.DLstatus));
       ESCvar.DLstatus = etohs (ESCvar.DLstatus);
+      if(restartEcatFlag){
+    	  return;
+      }
    }
 
 #if USE_FOE

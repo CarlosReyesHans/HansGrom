@@ -42,10 +42,11 @@ enum enum_ledRingStates {L_config,L_send,L_sleep,L_waitEvent,L_updateEffect,l_wa
 enum enum_ecatStates {ec_config,ec_checkConnection,ec_idle,ec_fault,ec_waitDMA,ec_sleep,ec_connected,ec_restart}ecat_step;	//pending Delete the waitDMA state
 enum enum_eventHStates {evH_waiting, evH_reportErr,evH_notifyEv,evH_finish}evH_step;
 enum enum_events {error_critical,error_non_critical,warning,event_success}eventType;
+// States for SOES SM are in the soesAPP.c
 
 volatile osEventFlagsId_t evt_sysSignals,taskManSignals;
 
-volatile uint8_t notificationFlag,suspendTaskManFlag,updateTaskManFlag;
+volatile uint8_t notificationFlag,restartTaskManFlag,updateTaskManFlag;
 volatile uint8_t errorFlag,ecatCMDFlag,warningFlag,normalFlag; //Assume that the error flag will be changed by the the functions report and notify.
 
 //	Task handlers for SMs
