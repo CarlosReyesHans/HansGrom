@@ -59,6 +59,7 @@
 
 /******************EXTERN********************************/
 extern int lan9252; //From lan9252_spi.c
+extern volatile uint8_t soesTimeoutFlag; //	From soesAPP.c
 
 uint32_t invert32data(uint32_t data) {
 	return data<<31&(1<<31)|
@@ -128,7 +129,7 @@ void ESC_read_csr (uint16_t address, void *buf, uint16_t len)
    {
 	  value = lan9252_read_32(ESC_CSR_CMD_REG);
 
-   } while(value & ESC_CSR_CMD_BUSY );
+   } while(value & ESC_CSR_CMD_BUSY && soesTimeoutFlag == 0 );
 
 
    value = lan9252_read_32(ESC_CSR_DATA_REG);
@@ -430,7 +431,7 @@ void ESC_init (const esc_cfg_t * config)
    do
    {
       value = lan9252_read_32(ESC_CSR_CMD_REG);
-   } while(value & ESC_RESET_CTRL_RST);
+   } while(value & ESC_RESET_CTRL_RST && soesTimeoutFlag == 0);
 
 
 

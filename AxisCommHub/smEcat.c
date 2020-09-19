@@ -14,24 +14,27 @@
 
 /*--------------------Variable used specially in this SM-----------------------------------------------------*/
 
-volatile uint8_t timedoutEcat,restartEcatFlag;
+volatile uint8_t timedoutEcat,restartEcatFlag;	//CHCKME These might have been substitued by soesTimeoutFlag
 static uint8_t escAPPok;
-osTimerId_t timerEcatSOES; // << This is used by SOES library
 
-
-/*---------------------------Variables needed by SOES Application---------------------------*/
-
-extern _ESCvar ESCvar;		// << Instance of the ESC that are declared within the sampleApp.c
-void APP_safeoutput ();	//TODO
-extern _MBXcontrol MBXcontrol[];
-extern uint8_t MBX[];
-extern _SMmap SMmap2[];
-extern _SMmap SMmap3[];
 /*----------------------------External variables----------------------------------------*/
 extern TIM_HandleTypeDef htim5;		//From main.c
 extern int lan9252; //From lan9252_spi.c
 extern volatile uint8_t ecatDMArcvd;	//Defined in LAN9252 library
 
+//	External variables for synchronizing with soes SM
+extern volatile uint8_t soesTimeoutFlag;
+
+
+osTimerId_t timerEcatSOES; // << CHCKME This is used by SOES library
+extern _ESCvar ESCvar;		// << Instance of the ESC that are declared within the sampleApp.c
+void APP_safeoutput ();	//CHCKME
+extern _MBXcontrol MBXcontrol[];
+extern uint8_t MBX[];
+extern _SMmap SMmap2[];
+extern _SMmap SMmap3[];
+
+/*----------------------------smEcat functions----------------------------------------*/
 /*
  * @brief Sate Machine for overall task of eCAT interface
  *
@@ -163,12 +166,12 @@ void ecat_SM (void * argument) {
 					notifyEvent((uint8_t)EV_ECAT_APP_NOK);
 				}
 
-				osDelay(500u);	// This could be a definition
+				osDelay(100u);	// This could be a definition
 
 				//	exit
 				if (restartEcatFlag) {
 					restartEcatFlag = FALSE;
-					//notifyError(ERR_ECAT_COMM_LOST);
+					notifyError(ERR_ECAT_COMM_LOST);
 					ecat_step = ec_fault;
 				}
 
@@ -309,8 +312,9 @@ void timeoutSOESCallback(void * argument) {
 		__NOP();	//Timeout while communicating
 		//Notify event
 	}
+	soesTimeoutFlag = TRUE;
 	restartEcatFlag = TRUE;		//Flag for taskmanager should be before flag is set.
-	restartTaskManFlag = TRUE;
+	//restartTaskManFlag = TRUE;
 	//status = osEventFlagsSet(taskManSignals, TASKM_EVENT);
 
-}
+	}

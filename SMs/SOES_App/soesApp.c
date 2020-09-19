@@ -26,19 +26,19 @@
 //include for testing
 #include "smEcat.h"
 
-//	Variables needed for SOES SM
-enum enum_soesStates {s_start,s_init1,s_init2,s_timerset,s_slaveloop,s_sleep,s_nostep,s_error}soes_step;
+//	External global variables related to DATA
+extern int16_t	gv_temperatureData[NUM_OF_SENSORS];		//	Declared in SMs.c
 
 //	Variables needed for synchronization with SMs
+extern osThreadId_t ecatSOESTHandler;
 extern osTimerId_t timerEcatSOES;
 osTimerId_t timerSOES;
 extern volatile osEventFlagsId_t evt_sysSignals,taskManSignals;
 extern uint32_t *heapObserver0,*heapObserver1,*heapObserver2;
 
-//	External global variables
-extern int16_t	gv_temperatureData[NUM_OF_SENSORS];		//	Declared in SMs.c
-extern osThreadId_t ecatSOESTHandler;
-
+//	Variables needed mainly for this SOES SM
+enum enum_soesStates {s_start,s_init1,s_init2,s_timerset,s_slaveloop,s_sleep,s_nostep,s_error}soes_step;
+volatile uint8_t soesTimeoutFlag;
 
 /* Application variables */
 _Rbuffer    Rb;
@@ -52,28 +52,23 @@ uint16_t masterCommand,masterTest0,masterTest1,masterTest2;
 uint8_t testInputButton;
 uint8_t testOutputLed;
 
-//_ESCvar ESCvar;		// << Instance of the ESC that are used so far within smEcat.c
 
-
+/*-----------------------------App functions-------------------------------------*/
 
 void cb_get_inputs (void)
 {
-   //Rb.button = gpio_get(GPIO_BUTTON_SW1);
-	//Rb.button = testInputButton;
-   //Rb.button = (flash_drv_get_active_swap() && 0x8);
-   //Cb.reset_counter++;
-   //Rb.encoder =  Cb.reset_counter;
-	Rb.status += 0xFA;
+	Rb.status += 0xFA;	//	These variables will be updated by other SMs
 	Rb.event += 0xFA;
 	Rb.error += 0xFA;
 	for (uint8_t i = 0; i < NUM_OF_SENSORS;i++) {
-		Rb.temp[i] = gv_temperatureData[i]; //TODO Link to a buffer
+		Rb.temp[i] = gv_temperatureData[i]; //
 	}
 }
 
+
 void cb_set_outputs (void)
 {
-
+	//	Outputs from the master
 	masterCommand = Wb.command;		// In the future this will be a shared memory
 	masterTest0 = Wb.testVal0;
 	masterTest1 = Wb.testVal1;
@@ -156,63 +151,147 @@ void soes (void * arg)
       .esc_hw_interrupt_disable = NULL,
       .esc_hw_eep_handler = NULL
    };
-   //	Init1
-   argument = 1u;
-   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
-   if (timerSOES == NULL) {
-	   __NOP();	//Handle error
-   }
-   heapObserver1 = timerSOES;
 
-   timerStatus = osTimerStart(timerSOES, 1000u);
-   if (timerStatus != osOK) {
-	   __NOP();		//Handle error
-   }
-
-   ecat_slv_init (&config);
-
-   if(osTimerIsRunning(timerSOES)) {
-	   timerStatus = osTimerStop(timerSOES);
-	   timerStatus = osTimerDelete(timerSOES);
-	   if (timerStatus != osOK)
-		   __NOP();	//Handle error
-   }
+   // This is the soes sm
 
 
-   osEventFlagsSet(evt_sysSignals, ECAT_EVENT|EV_ECAT_ESC_INIT);	//TODO << Check with heap observer that two flags are set
-   // 	Init2
-   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM in State: Connected
+   soes_step = s_start;
 
-   //	Starting soes app timing
-   time2soes = osKernelGetTickCount();
-   argument = 2u;
-   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
-   //time2soes += SOES_REFRESH_CYCLE;
-   //osDelayUntil(time2soes);
+   while(1) {
+	   switch (soes_step) {
+	   /*--------------------------------------------------------------------------------*/
+	   //	Dummy state
+	   case s_start:
+		   //	entry:
+		   __NOP();
+		   //	exit:
+		   soes_step = s_init1;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_init1:
+		   //	entry:
 
-   while (1)
-   {
-	   //	action
-
-	   if (timerSOES == NULL) {
-		   __NOP();	//Handle error
-	   }
-	   osTimerStart(timerSOES, 1000u);
-	   //time2soes += SOES_REFRESH_CYCLE;
-	   ecat_slv();
-
-	   if(osTimerIsRunning(timerSOES)) {
-		   timerStatus = osTimerStop(timerSOES);
-		   if (timerStatus != osOK)
+		   if (timerSOES != NULL) {
+			   //	Timer not null might mean that it came from an strange state
 			   __NOP();	//Handle error
-	   }
+			   soes_step = s_error;
+			   break;
+		   }
+		   //	Timer for the init state sm, needs to be null at the beginning
+		   argument = 1u;
+		   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
+		   if (timerSOES == NULL) {	//Normal check-up of timer after creation
+			   __NOP();	//Handle error
+			   soes_step = s_error;
+			   break;
+		   }
 
-	   //	exit
-	   //osDelayUntil(time2soes);
-	   osDelay(SOES_REFRESH_CYCLE);
-	   // This could be improved usign delay till os function
+		   timerStatus = osTimerStart(timerSOES, 1000u);
+		   if (timerStatus != osOK) {
+			   __NOP();		//Handle error
+			   soes_step = s_error;
+			   break;
+		   }
 
-   }
+		   ecat_slv_init (&config);
+
+		   //	exit:
+		   if(osTimerIsRunning(timerSOES)) {
+			   timerStatus = osTimerStop(timerSOES);
+			   timerStatus = osTimerDelete(timerSOES);
+			   if (timerStatus != osOK) {
+				   __NOP();	//Handle error
+				   soes_step = s_error;
+				   break;
+			   }
+		   }
+		   if (soesTimeoutFlag) {	//	soes loop left by timeout
+			   //	Handle error
+			   soes_step = s_error;
+			   break;
+		   }
+		   soes_step = s_init2;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_init2:
+		   //	entry:
+		   osEventFlagsSet(evt_sysSignals, ECAT_EVENT|EV_ECAT_ESC_INIT);	//TODO << Check with heap observer that two flags are set
+		   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM in State: Connected. This could be an event
+		   //	exit:
+		   argument = 2u;
+		   timerSOES = osTimerNew(timeoutSOESCallback, osTimerOnce, &argument, NULL);
+		   if (timerSOES == NULL) {
+			   __NOP();	//Handle error
+			   soes_step = s_error;
+			   break;
+		   }
+		   //	Starting soes app timing
+		   time2soes = osKernelGetTickCount();	//PENDING This variable could be used for improved refresh cycle control
+		   soes_step = s_timerset;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_timerset:
+		   //	entry:
+		   timerStatus = osTimerStart(timerSOES, 1000u);
+		   if(timerStatus != osOK) {
+			   __NOP();	//Handle error
+			   soes_step = s_error;
+			   break;
+		   }
+		   heapObserver1 = timerSOES;
+
+		   //	exit:
+		   soes_step = s_slaveloop;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_slaveloop:
+		   //	entry:
+		   ecat_slv();
+		   //	exit:
+		   if(osTimerIsRunning(timerSOES)) {
+			   timerStatus = osTimerStop(timerSOES);
+			   if (timerStatus != osOK) {
+				   __NOP();	//Handle error
+				   soes_step = s_error;
+				   break;
+			   }
+		   }
+		   if (soesTimeoutFlag) {	//	soes loop left by timeout
+			   //	Handle error
+			   soes_step = s_error;
+			   break;
+		   }
+		   soes_step = s_sleep;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_sleep:
+		   //	entry:
+		   osDelay(SOES_REFRESH_CYCLE);
+		   // A better refresh cycle control could be achieved by using osDelayUntil();
+		   //	exit:
+		   if (soesTimeoutFlag) {	//	soes loop left by timeout
+			   //	Handle error
+			   soes_step = s_error;
+			   break;
+		   }
+		   soes_step = s_timerset;
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   case  s_error:
+		   __NOP();	//	Handle the error
+		   timerStatus = osTimerDelete(timerSOES);
+		   if (timerStatus != osOK) {
+			   __NOP();	//Handle error
+		   }
+		   //osDelay(100);	//TEST
+		   osThreadSuspend(ecatSOESTHandler); // this should wait for event handler or something to restart
+		   break;
+	   /*--------------------------------------------------------------------------------*/
+	   default:
+		   soes_step = s_error;
+		   //soesTimeoutFlag = FALSE;
+	   }	//	End switch
+   }	//	End while
 }
 
 uint8_t load1s, load5s, load10s;

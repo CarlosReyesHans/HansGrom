@@ -21,8 +21,10 @@ _SMmap      SMmap3[MAX_MAPPINGS_SM3];
 _ESCvar     ESCvar;
 
 
-/*temporal extern*/
-extern volatile uint8_t timedoutEcat,restartEcatFlag;
+/******************EXTERN********************************/
+
+extern volatile uint8_t soesTimeoutFlag; //	From soesAPP.c
+
 
 /* Private variables */
 static volatile int watchdog;
@@ -322,15 +324,13 @@ void ecat_slv_init (esc_cfg_t * config)
    ESC_init (config);
  uint16_t anotherTemp = 0;
    /*  wait until ESC is started up */
-   while ((ESCvar.DLstatus & 0x0001) == 0)
+   while ((ESCvar.DLstatus & 0x0001) == 0 && soesTimeoutFlag == 0)
    {
 	  ESC_read_csr(ESCREG_DLSTATUS, &anotherTemp, sizeof(anotherTemp));
       ESC_read (ESCREG_DLSTATUS, (void *) &ESCvar.DLstatus,
                 sizeof (ESCvar.DLstatus));
       ESCvar.DLstatus = etohs (ESCvar.DLstatus);
-      if(restartEcatFlag){
-    	  return;
-      }
+
    }
 
 #if USE_FOE
