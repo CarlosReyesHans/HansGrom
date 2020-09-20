@@ -29,34 +29,74 @@
 //	Timing for SOES
 #define SOES_REFRESH_CYCLE		20u		//in Systicks
 
+// 	Mind the following structure for event flags (See #define MAX_BITS_EVENT_GROUPS     24U)
+// | 8 reserved bits | 14 bits (16383d) error space | 10 bit individual event flags|
 
-//	Declaration of errors
-#define	ERR_SENSOR_INIT		10
-#define ERR_SENSOR_LOST		11
-#define ERR_SENSOR_TIMEOUT	12
-#define ERR_LED_INIT		20
-#define ERR_LED_TIMEOUT		21
-#define ERR_LED_SEND		22
-#define	ERR_LED_OSTIM		23
-#define	ERR_ECAT_INIT		30
-#define ERR_ECAT_COMM_LOST		31
-#define ERR_ECAT_TIMEOUT	32
-#define ERR_ECAT_OSTIM		33
-
-//	Definition of internal events
-#define EV_ECAT_ESC_INIT	(1<<10)
-#define EV_ECAT_APP_OP	(1<<11)
-#define EV_ECAT_APP_INIT		(1<<12)
-#define EV_ECAT_APP_NOK			(1<<13)
-#define EV_ECAT_ESC_CONN_LOST		(1<<14)
-#define EV_SOES_RESPAWNED		(1<<15)
-
-
+//	Declaration of event flags (10 available)
 #define SYS_EVENT			(1<<0)
 #define LED_EVENT			(1<<1)
 #define TSENS_EVENT			(1<<2)
 #define ECAT_EVENT			(1<<3)
 #define	TASKM_EVENT			(1<<4)
+
+
+//	Offsets
+#define ERR_OFFSET		1000u
+#define EV_OFFSET		2000u
+#define	SHIFT_OFFSET	10u
+//	Declaration of errors
+#define	ERR_SYS_NONE			0
+#define	ERR_SYS_UNKNOWN			101
+
+
+#define	ERR_TEMP_SENS_INIT		 1101u
+#define ERR_TEMP_SENS_LOST		 1102u
+#define ERR_TEMP_SENS_TIMEOUT	 1103u
+#define ERR_TEMP_SENS_OVERHEAT	 1104u
+#define	ERR_TEMP_DSM_FAULT		 1105u
+
+#define ERR_LED_INIT		 1201u
+#define ERR_LED_TIMEOUT		 1202u
+#define ERR_LED_SEND		 1203u
+#define	ERR_LED_OSTIM		 1204u
+#define	ERR_LED_DSM_FAULT	 1205u
+
+#define	ERR_ECAT_INIT			 1301u
+#define ERR_ECAT_COMM_LOST		 1302u
+#define ERR_ECAT_TIMEOUT		 1303u
+#define ERR_ECAT_DSM_FAULT		 1304u
+#define ERR_ECAT_CMD_FAULT		 1305u
+#define ERR_ECAT_CMD_SOFTFAULT		 1306u
+
+//	Definition of internal events
+#define EV_TEMP_DSM_INIT	 2101
+
+#define EV_LED_DSM_INIT		 2201
+#define EV_LED_UPTD			 2211
+
+#define EV_ECAT_ESC_INIT		 2301
+#define EV_ECAT_APP_OP			 2311
+#define EV_ECAT_APP_INIT		 2312
+#define EV_ECAT_APP_NOOP		 2313
+#define EV_ECAT_DSM_INIT		 2321
+#define EV_SOES_RESPAWNED		 2331
+#define EV_ECAT_CMD_ACK			 2351
+#define EV_ECAT_CMD_LED_TOGGLE	 2352
+
+
+// 	Mind the following structure for status variable (according to size of errors and events (16383d))
+// | 14 bits last event space | 14 bits last error space | 4 bit General state |
+#define	STATUS_OFFSET_FOR_ERR	4u
+#define	STATUS_OFFSET_FOR_EV	18u
+
+#define STATUS_DATA_MASK		0x3FFF
+#define STATUS_SHORT_MASK		0x0F
+
+#define	STATUS_INIT				1u
+#define	STATUS_STARTED			2u
+#define	STATUS_NO_ERRORS		4u
+#define STATUS_SOFT_ERRORS		5u
+
 
 //	Definition of specific timeouts
 //	ECAT/SOES

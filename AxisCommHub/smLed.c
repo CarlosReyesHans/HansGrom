@@ -26,6 +26,7 @@ extern TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Declared in WS2812 
 void ledRings_SM (void * argument) {
 	uint8_t chsetupOK[NUM_OF_LEDRINGS];
 	uint8_t error = 0;
+	uint32_t temp32;
 	osStatus_t timerStatus;
 
 	timeoutLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
@@ -64,13 +65,16 @@ void ledRings_SM (void * argument) {
 				//	exit
 				if (error) {
 					notifyError(ERR_LED_INIT);	//Pending This should notify over ECAT but not stop the overall SM
-					led_step = L_error;
+					led_step = L_restart;
 				}
 				else {
 					error = 0;
 					//Set the Effects
 					//TODO is there any error?
 					setColorState(color_preop);
+					temp32 = SYS_EVENT|(EV_LED_DSM_INIT<<SHIFT_OFFSET);
+					osEventFlagsSet(evt_sysSignals, temp32);
+					//notifyEvent(LED_INIT);
 					led_step = L_send;
 				}
 
@@ -133,6 +137,9 @@ void ledRings_SM (void * argument) {
 				if (errorFlag) {
 					setColorState(color_error);
 				}
+				else if (initFlag) {
+					__NOP();	//	Keeps the default color
+				}
 				else if (ecatCMDFlag) {
 					setColorState(color_custom);
 				}
@@ -144,7 +151,7 @@ void ledRings_SM (void * argument) {
 				}
 
 				//	exit
-
+				//notifyEvent(LED_UPDATED);
 				led_step = EFFECTS_ACTIVATED ? L_updateEffect : l_waitRefresh;
 
 				break;
@@ -159,8 +166,7 @@ void ledRings_SM (void * argument) {
 				led_step = l_waitRefresh;
 				break;
 		/*--------------------------------------------------------------------------------*/
-			case	l_waitRefresh:	//TODO there should be a way to use the OS to sleep the TASK till a signal from interrupt come or TIMEOUT of REFRESH
-
+			case	l_waitRefresh:
 				// action
 				if(osTimerStart(refreshLed, (uint32_t)PWM_REFRESH_PERIOD)!= osOK) {
 					__NOP(); //Handle the OS TIMER starting error.
@@ -200,7 +206,7 @@ void ledRings_SM (void * argument) {
 				}
 
 				for (uint8_t i = 1; i<=NUM_OF_LEDRINGS; i++) {
-					ledDMA_restartCH(i);	//TODO Define this function
+					ledDMA_restartCH(i);
 				}
 
 				//exit
@@ -240,10 +246,11 @@ void setColorState(enum enum_colorStates colorState) {
 		tempRGB = (WS2812_RGB_t){0,0,255};		//Blue
 		break;
 	case color_warning:
-		tempRGB = (WS2812_RGB_t){255,165,0};	//Orange
+		tempRGB = (WS2812_RGB_t){255,165,0};	//Orange //{255,165,0}
 		break;
 	case color_custom:
 		tempRGB = (WS2812_RGB_t){148,0,211};	//Violet
+		break;
 	default:
 		tempRGB = (WS2812_RGB_t){169,169,169};	//Gray
 

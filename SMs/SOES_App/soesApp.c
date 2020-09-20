@@ -215,7 +215,7 @@ void soes (void * arg)
 	   /*--------------------------------------------------------------------------------*/
 	   case  s_init2:
 		   //	entry:
-		   osEventFlagsSet(evt_sysSignals, ECAT_EVENT|EV_ECAT_ESC_INIT);	//TODO << Check with heap observer that two flags are set
+		   osEventFlagsSet(evt_sysSignals, ECAT_EVENT);	// EV_ECAT_ESC_INIT not necessary notified to Event Handler
 		   osThreadSuspend(ecatSOESTHandler);	// << Resumed by Ecat SM in State: Connected. This could be an event
 		   //	exit:
 		   argument = 2u;

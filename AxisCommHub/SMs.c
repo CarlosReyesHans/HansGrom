@@ -197,6 +197,7 @@ void tempSens_SM (void * argument) {
 	uint8_t chsetupOK[NUM_OF_SENSORS];	//This may need to be initialized
 	uint8_t evalChData[NUM_OF_SENSORS];	//This array will contain the status of the data after being evaluated: overheated or not
 	uint8_t error = 0;
+	uint32_t temp32;
 	static uint8_t activeChs = 0;	//<< access allowed from other functions
 
 	while(1) {		//Infinite loop enforced by task execution
@@ -217,8 +218,11 @@ void tempSens_SM (void * argument) {
 						}
 					}
 				//exit
-				if (error) notifyError(ERR_SENSOR_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
+				if (error) notifyError(ERR_TEMP_SENS_INIT);	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				error = 0;		//TODO should this be global and be working in another SM
+				temp32 = SYS_EVENT|(EV_TEMP_DSM_INIT<<SHIFT_OFFSET);
+				osEventFlagsSet(evt_sysSignals, temp32);
+
 				tS_step = t_chk_chs;
 
 				break;
@@ -311,7 +315,7 @@ void taskManger(void * argument) {
 			//status = osThreadTerminate(ecatSOESTHandler);
 			//ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
 			//status = osThreadSuspend(ecatSOESTHandler);
-			osEventFlagsSet(evt_sysSignals, TASKM_EVENT|EV_SOES_RESPAWNED);
+			//osEventFlagsSet(evt_sysSignals, TASKM_EVENT|EV_SOES_RESPAWNED);
 		}
 
 		status_ecatTestT = osThreadGetState(ecatTestTHandler);
@@ -458,6 +462,8 @@ void addThreads(void) {
 
 
 	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
+
+	sysState = STATUS_INIT;
 	//Debug tasks
 	//eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
 }

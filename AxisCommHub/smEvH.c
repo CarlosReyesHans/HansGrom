@@ -20,65 +20,162 @@
 
 void eventH_SM (void * argument) {
 
-	uint32_t flag;	//CHCKME whether this is needed
-
+	uint32_t status,flags;	//CHCKME whether this is needed
+	uint16_t event_data;
 	//enum enum_events eventType;
 
 	while(1) {		//Infinite loop enforced by task execution
 
 		switch (evH_step) {
-			case	evH_waiting:
-//				if (!(notificationFlag && errorFlag))	//TODO this should be actually a queue
-//					osThreadSuspend(eventHTHandle);	//TODO assume that after this instruction the task is changed by scheduler, so next time it is called is due to and event.
-				flag = osEventFlagsWait(evt_sysSignals, SYS_EVENT, osFlagsWaitAny, osWaitForever);
+		/*-------------------------------------------------------------------*/
+		case	evh_init:
+			evH_initFlag = TRUE;
+			evH_step = evH_waiting;
+			break;
+		/*-------------------------------------------------------------------*/
+		case	evH_waiting:
+			//	entry:
+			status = osEventFlagsWait(evt_sysSignals, SYS_EVENT, osFlagsWaitAny, osWaitForever);
+			//	exit:
+			evH_step = evH_check;
+			break;
+		/*-------------------------------------------------------------------*/
+		case	evH_check:
+			//	entry:
+			status = osEventFlagsGet(evt_sysSignals);	//TODO check whether the flags are cleared
+			event_data = (status>>SHIFT_OFFSET);
+			if (event_data>EV_OFFSET) {
+				evH_step = evH_notifHandling;
+			}
+			else if (event_data>ERR_OFFSET) {
+				evH_step = evH_errHandling;
+			}
+			else {
+				__NOP();
+				evH_step = evH_error;
+			}
 
-
-				//exit
-				if (errorFlag) {
-					evH_step = evH_reportErr;
-					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
+			//	exit:
+			break;
+		/*-------------------------------------------------------------------*/
+			case evH_errHandling:
+				//	entry:
+				if (event_data == ERR_ECAT_DSM_FAULT ||
+						ERR_ECAT_CMD_FAULT || ERR_LED_DSM_FAULT ||
+						ERR_TEMP_DSM_FAULT || ERR_TEMP_SENS_OVERHEAT
+						) {
+					//	PENDING Add an specific action depending on the error
+					errorFlag = TRUE;
+					normalFlag = FALSE;
+				}	//
+				else if (event_data == ERR_TEMP_SENS_LOST ||
+						ERR_ECAT_CMD_SOFTFAULT) {
+					//	PENDING Add an specific action depending on the warning
+					warningFlag = TRUE;
+					normalFlag = FALSE;
+				}
 				else {
-					evH_step = evH_notifyEv;
+					//	do nothing
+					warningFlag = TRUE;
+					__NOP();
+					evH_step = evH_error;
+					break;
 				}
 
-				break;
-
-			case evH_reportErr:
-//				 eventType = getCriticality(errorHandler);
-//				switch (eventType) {
-//				case	error_critical:
-//					evh_publish(errorHandler);	//High Priority TODO This function should differenciate between critical and non critical data, TRUE is the arg of priority
-//					led_changeSysColors(&currentColors, error_critical);
-//					break;
-//				case	error_non_critical:
-//					evh_publish(errorHandler);
-//					led_changeSysColors(&currentColors, error_non_critical);	//TODO This function should change the buffer in an atomic way
-//
-//				case	warning:
-//					evh_publish(errorHandler);
-//					led_changeSysColors(&currentColors, warning);
-//				default :
-//					__NOP();
-//				}
-				//exit
-				//errorFlag = FALSE;	//TODO What would happen if another error apperead while processin this?
-				evH_step = evH_finish;
-				break;
-
-			case evH_notifyEv:
-
-//				evh_publish(notificationHandler);
-//				led_changeSysColors(&currentColors, event_success);
-				notificationFlag = FALSE;	//TODO What would happen if another error apperead while processin this?
-				evH_step = evH_finish;
-				break;
-
-			case	evH_finish:
-				eventHandled = TRUE; //TODO this flag should be adequate for usage of other SMs
+				sysState &= ~(STATUS_DATA_MASK<<STATUS_OFFSET_FOR_ERR);
+				sysState |= ((event_data&STATUS_DATA_MASK)<<STATUS_OFFSET_FOR_ERR);
 
 				//exit
+				flags = osEventFlagsGet(evt_sysSignals);	//	SYS_EVENT flag is cleared while returning from eventsFlagWait functions
+				osEventFlagsClear(evt_sysSignals,flags);	//	Due to the priorities, it is not possible that another task creates events while this SM is running
 				evH_step = evH_waiting;
 				break;
+		/*-------------------------------------------------------------------*/
+			case evH_notifHandling:
+				//	entry:
+				if (event_data == EV_TEMP_DSM_INIT) {
+					//	PENDING Add an specific action depending on the error
+					temp_initFlag = TRUE;
+				}	//
+				else if (event_data == EV_LED_DSM_INIT) {
+					//	PENDING Add an specific action depending on the warning
+					led_initFlag = TRUE;
+				}
+				else if (event_data == EV_ECAT_DSM_INIT) {
+					//	PENDING Add an specific action depending on the warning
+					ecat_initFlag = TRUE;
+				}
+				else if (event_data == EV_ECAT_CMD_ACK) {
+					//	PENDING Add an specific action depending on the warning
+					sysState = 0xFF;
+					//evH_step = evH_ecatCMD;
+					//break;
+				}
+				else if (event_data == EV_ECAT_APP_OP) {
+					//	PENDING Add an specific action depending on the warning
+					if ((sysState&STATUS_SHORT_MASK) == STATUS_STARTED ) { //&& ((sysState>>STATUS_OFFSET_FOR_ERR)&STATUS_DATA_MASK)==ERR_SYS_NONE)
+						warningFlag = FALSE;
+						normalFlag = TRUE;
+						if(((sysState>>STATUS_OFFSET_FOR_ERR)&STATUS_DATA_MASK)==ERR_ECAT_COMM_LOST) {
+							errorFlag = FALSE;
+						}
+					}
+
+				}
+				else if (event_data == EV_ECAT_APP_INIT) {
+					//	PENDING Add an specific action depending on the warning
+					warningFlag = TRUE;
+					normalFlag = FALSE;
+				}
+				else if (event_data > EV_ECAT_CMD_ACK) {
+					//	PENDING Complete the ECAT CMD handler
+					//evH_step = evH_ecatCMD;
+					__NOP();
+				}
+				else {
+					//	do nothing
+					__NOP();
+
+					evH_step = evH_error;
+					break;
+				}
+				if ((sysState&STATUS_SHORT_MASK) == STATUS_INIT && temp_initFlag && led_initFlag && ecat_initFlag ) {
+					status = (sysState>>STATUS_OFFSET_FOR_ERR);	//	used as temp
+					sysState = STATUS_STARTED|(status<<STATUS_OFFSET_FOR_ERR);
+				}
+
+				sysState &= ~(STATUS_DATA_MASK<<STATUS_OFFSET_FOR_EV);	//	Clearing the previous Event
+				sysState |= ((event_data&STATUS_DATA_MASK)<<STATUS_OFFSET_FOR_EV);
+
+				//exit
+
+				flags = osEventFlagsGet(evt_sysSignals);	//	SYS_EVENT flag is cleared while returning from eventsFlagWait functions
+				osEventFlagsClear(evt_sysSignals,flags);	//	Due to the priorities, it is not possible that another task creates events while this SM is running
+				evH_step = evH_waiting;
+				break;
+		/*-------------------------------------------------------------------*/
+			case	evH_ecatCMD:
+				//	entry:
+				//	PENDING create a ecat command handler
+				//eventHandled = TRUE; //TODO this flag should be adequate for usage of other SMs
+				__NOP();
+
+				//exit
+				status = SYS_EVENT |(event_data<<ERR_OFFSET);
+				osEventFlagsClear(evt_sysSignals, status);
+				evH_step = evH_waiting;
+				break;
+		/*-------------------------------------------------------------------*/
+			case	evH_error:
+				//	entry:
+				// This DSM has end since an error in the event handler is critical and should be debugged by programmer.
+				errorFlag = TRUE;
+				sysState = ERR_SYS_UNKNOWN;
+
+				//	exit
+				osThreadSuspend(eventHTHandle);
+				break;
+		/*-------------------------------------------------------------------*/
 			default:
 				__NOP();
 			}

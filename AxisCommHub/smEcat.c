@@ -15,7 +15,7 @@
 /*--------------------Variable used specially in this SM-----------------------------------------------------*/
 
 volatile uint8_t timedoutEcat,restartEcatFlag;	//CHCKME These might have been substitued by soesTimeoutFlag
-static uint8_t escAPPok;
+static uint8_t escAPP_lastState,escAPP_lastError;
 
 /*----------------------------External variables----------------------------------------*/
 extern TIM_HandleTypeDef htim5;		//From main.c
@@ -79,6 +79,8 @@ void ecat_SM (void * argument) {
 					} 	//TODO this should be sort of a signal, this should not stop the execution of this SM
 				else {
 					lan9252 = open ("LOCAL_SPI", O_RDWR, 0);
+					rcvdData = SYS_EVENT|(EV_ECAT_DSM_INIT<<SHIFT_OFFSET);	//rcvData is only temporary
+					osEventFlagsSet(evt_sysSignals, rcvdData);
 					ecat_step = ec_checkConnection;
 				}
 
@@ -154,24 +156,24 @@ void ecat_SM (void * argument) {
 				}
 
 				//	action
-				if (ESCvar.ALstatus == ESC_APP_OK && !escAPPok) {
-					escAPPok = TRUE;
-					osEventFlagsSet(evt_sysSignals, ECAT_EVENT);
+				if ((ESCvar.ALerror != 0)&&(ESCvar.ALerror !=(uint16_t)escAPP_lastError)) {
+					escAPP_lastError = ESCvar.ALerror;
+					osEventFlagsSet(evt_sysSignals, SYS_EVENT|(ERR_ECAT_COMM_LOST<<SHIFT_OFFSET));
 				}
-				else if((ESCvar.ALstatus & ESCop)&&!escAPPok){
-					escAPPok = TRUE;
-					notifyEvent((uint8_t)EV_ECAT_APP_OP);
+				else if((ESCvar.ALstatus & ESCop)&&(ESCvar.ALstatus !=escAPP_lastState)) {
+					escAPP_lastError = 0;
+					osEventFlagsSet(evt_sysSignals, SYS_EVENT|(EV_ECAT_APP_OP<<SHIFT_OFFSET));	//Needs to be adapted to new structure
 				}
-				else if((ESCvar.ALstatus & ESCinit)&&!escAPPok){
-					notifyEvent((uint8_t)EV_ECAT_APP_NOK);
+				else if((ESCvar.ALstatus & ESCinit)&&(ESCvar.ALstatus !=escAPP_lastState)) {
+					osEventFlagsSet(evt_sysSignals, SYS_EVENT|(EV_ECAT_APP_INIT<<SHIFT_OFFSET));
 				}
-
+				escAPP_lastState = (uint8_t)ESCvar.ALstatus;
 				osDelay(100u);	// This could be a definition
 
 				//	exit
 				if (restartEcatFlag) {
 					restartEcatFlag = FALSE;
-					notifyError(ERR_ECAT_COMM_LOST);
+					osEventFlagsSet(evt_sysSignals, SYS_EVENT|(ERR_ECAT_COMM_LOST<<SHIFT_OFFSET));
 					ecat_step = ec_fault;
 				}
 
@@ -187,7 +189,7 @@ void ecat_SM (void * argument) {
 				//entry
 
 				//action
-				escAPPok = FALSE;
+				escAPP_lastState = FALSE;
 				firstExec = FALSE;
 				//Task manager should have restarted the SOES Thread
 				//osEventFlagsWait(evt_sysSignals,TASKM_EVENT|EV_SOES_RESPAWNED, osFlagsWaitAny, osWaitForever);
