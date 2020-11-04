@@ -2,7 +2,7 @@
  * AxisCommHub_definitions.h
  *
  *  Created on: Jun 11, 2020
- *      Author: CarlosReyes
+ *      Author: Carlos Reyes
  */
 
 #ifndef AXISCOMMHUB_DEFINITIONS_H_
@@ -17,7 +17,7 @@
 //	Definition of peripherals
 #define	NUM_OF_SENSORS			15u
 
-#define MAX_OF_LEDRINGS			4		//This values should be modified in the LED library
+#define MAX_OF_LEDRINGS			4		//	This values should be modified in the LED library
 #define NUM_OF_LEDRINGS			2
 #define NUM_OF_LEDS_PER_RING	5		//	If the number is not the same for all LED Rings, then change directly within the LED library
 
@@ -27,7 +27,7 @@
 #define FAILED					-1
 
 //	Timing for SOES
-#define SOES_REFRESH_CYCLE		20u		//in Systicks
+#define SOES_REFRESH_CYCLE		20u		//	in Systicks
 
 // 	Mind the following structure for event flags (See #define MAX_BITS_EVENT_GROUPS     24U)
 // | 8 reserved bits | 14 bits (16383d) error space | 10 bit individual event flags|
@@ -41,9 +41,9 @@
 
 
 //	Offsets
-#define ERR_OFFSET		1000u
-#define EV_OFFSET		2000u
-#define	SHIFT_OFFSET	10u
+#define ERR_OFFSET				1000u
+#define EV_OFFSET				2000u
+#define	SHIFT_OFFSET			10u
 //	Declaration of errors
 #define	ERR_SYS_NONE			0
 #define	ERR_SYS_UNKNOWN			101
@@ -55,24 +55,24 @@
 #define ERR_TEMP_SENS_OVERHEAT	 1104u
 #define	ERR_TEMP_DSM_FAULT		 1105u
 
-#define ERR_LED_INIT		 1201u
-#define ERR_LED_TIMEOUT		 1202u
-#define ERR_LED_SEND		 1203u
-#define	ERR_LED_OSTIM		 1204u
-#define	ERR_LED_DSM_FAULT	 1205u
+#define ERR_LED_INIT		 	1201u
+#define ERR_LED_TIMEOUT		 	1202u
+#define ERR_LED_SEND		 	1203u
+#define	ERR_LED_OSTIM		 	1204u
+#define	ERR_LED_DSM_FAULT	 	1205u
 
 #define	ERR_ECAT_INIT			 1301u
 #define ERR_ECAT_COMM_LOST		 1302u
 #define ERR_ECAT_TIMEOUT		 1303u
 #define ERR_ECAT_DSM_FAULT		 1304u
 #define ERR_ECAT_CMD_FAULT		 1305u
-#define ERR_ECAT_CMD_SOFTFAULT		 1306u
+#define ERR_ECAT_CMD_SOFTFAULT	 1306u
 
 //	Definition of internal events
-#define EV_TEMP_DSM_INIT	 2101
+#define EV_TEMP_DSM_INIT	 	2101
 
-#define EV_LED_DSM_INIT		 2201
-#define EV_LED_UPTD			 2211
+#define EV_LED_DSM_INIT		 	2201
+#define EV_LED_UPTD			 	2211
 
 #define EV_ECAT_ESC_INIT		 2301
 #define EV_ECAT_APP_OP			 2311

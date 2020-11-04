@@ -97,16 +97,16 @@ int8_t calcBuf(uint8_t ch) {
 	  bufferPtr[pos++]=((led.red&0x02) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
 	  bufferPtr[pos++]=((led.red&0x01) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
 
-    // Col:Green , Bit:7..0
-    bufferPtr[pos++]=((led.green&0x80) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x40) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x20) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x10) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x08) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x04) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x02) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
-    bufferPtr[pos++]=((led.green&0x01) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
 
+	  // Col:Green , Bit:7..0
+	  bufferPtr[pos++]=((led.green&0x80) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x40) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x20) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x10) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x08) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x04) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x02) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
+	  bufferPtr[pos++]=((led.green&0x01) != 0)?WS2812_HI_TIME:WS2812_LO_TIME;
 
 
 	// Col:Blue , Bit:7..0

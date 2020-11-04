@@ -2,11 +2,10 @@
  * SMs.c
  *
  *  Created on: Jun 3, 2020
- *      Author: CarlosReyes
+ *      Author: Carlos Reyes
  */
 
 #include "main.h"
-
 #include "AxisCommHub_definitions.h"
 #include "SMs.h"
 #include "smEcat.h"
@@ -15,7 +14,7 @@
 extern osTimerId_t timerEcatSM,timerEcatSOES;
 
 /*-----------------------------------------------TASKS for SMs--------------------------------------------------------------*/
-// Add the handlers of the tasks within the SMs.h
+// Task Handlers declared within the SMs.h
 
 
 uint32_t tempSensTBuffer[ 192 ];
@@ -69,17 +68,6 @@ const osThreadAttr_t eventHT_attributes = {
 
 
 
-//uint32_t uartPrintTBuffer[ 64 ];
-//StaticTask_t uartPrintTControlBlock;
-//const osThreadAttr_t uartPrintT_Attributes = {
-//		.name = "uartPrintT",
-//		.stack_mem = &uartPrintTBuffer[0],
-//		.stack_size	= sizeof(uartPrintTBuffer),
-//		.cb_mem = &uartPrintTControlBlock,
-//		.cb_size = sizeof(uartPrintTControlBlock),
-//		.priority = (osPriority_t) osPriorityBelowNormal,
-//};
-
 /*-------------------------ECAT--------------------------------------*/
 uint32_t ecatTestTBuffer[ 192 ];
 StaticTask_t ecatTestTControlBlock;
@@ -116,20 +104,6 @@ const osThreadAttr_t taskManagerT_Attributes = {
 		.cb_size = sizeof(taskManagerTControlBlock),
 		.priority = (osPriority_t) osPriorityHigh,
 };
-
-
-//uint32_t eventTesterTBuffer[64];
-//StaticTask_t eventTesterTControlBlock;
-//const osThreadAttr_t eventTesterT_Attributes = {
-//		.name = "eventTesterT",
-//		.stack_mem = &eventTesterTBuffer[0],
-//		.stack_size = sizeof(eventTesterTBuffer),
-//		.cb_mem = &eventTesterTControlBlock,
-//		.cb_size = sizeof(eventTesterTControlBlock),
-//		.priority = osPriorityBelowNormal1,
-//};
-
-
 
 
 
@@ -298,10 +272,10 @@ void tempSens_SM (void * argument) {
 
 
 
-/*----------------------------------------------------Here start the definitions of the functions needed by SM --------------*/
-/*------------------------------------------ Task Manager functions ---------------------------------------------------------*/
+/*-------------------------Here start the definitions of the functions needed by SM --------------*/
+/*----------------------------------- Task Manager functions ---------------------------------------*/
 /* *
- * @brief This function will update the status for each task
+ * @brief 	This function will update the status for each task and terminate a thread if needed
  * */
 
 void taskManger(void * argument) {
@@ -337,6 +311,43 @@ void taskManger(void * argument) {
 	//osThreadTerminate(taskManagerTHandler);	//If ever jumps out the loop
 
 }
+
+/* *
+ * @brief	This function adds the threads to be executed to the OS and the general signals
+ * */
+void addThreads(void) {
+	evt_sysSignals = osEventFlagsNew(NULL);
+	if (evt_sysSignals == NULL){
+		//Handle error
+		__NOP();
+	}
+	taskManSignals = osEventFlagsNew(NULL);
+	if (taskManSignals == NULL){
+		//Handle error
+		__NOP();
+	}
+
+	heapObserver0 = evt_sysSignals;
+	heapObserver1 = taskManSignals;
+
+	//	Initializing main threads
+	tempSensTHandle = osThreadNew(tempSens_SM, NULL, &tempSensT_attributes);
+	ledRingsTHandle = osThreadNew(ledRings_SM, NULL, &ledRingsT_attributes);
+	ecatSMTHandle = osThreadNew(ecat_SM, NULL, &ecatSMT_attributes);
+	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
+
+	//	Auxiliar tasks
+
+	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
+	ecatStatus = osThreadSuspend(ecatSOESTHandler);
+	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
+
+	sysState = STATUS_INIT;
+	//Debug tasks
+	//eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
+}
+
+
 
 /*------------------------------------------ Temperature functions ----------------------------------------------------------*/
 /**
@@ -431,42 +442,6 @@ void uartUpdt (void * argument) {
 
 
 
-/* *
- * @brief	This function only adds the threads to be executed to the OS
- * */
-void addThreads(void) {
-	evt_sysSignals = osEventFlagsNew(NULL);
-	if (evt_sysSignals == NULL){
-		//Handle error
-		__NOP();
-	}
-	taskManSignals = osEventFlagsNew(NULL);
-	if (taskManSignals == NULL){
-		//Handle error
-		__NOP();
-	}
-
-	heapObserver0 = evt_sysSignals;
-	heapObserver1 = taskManSignals;
-
-	//	Initializing main threads
-	tempSensTHandle = osThreadNew(tempSens_SM, NULL, &tempSensT_attributes);
-	ledRingsTHandle = osThreadNew(ledRings_SM, NULL, &ledRingsT_attributes);
-	ecatSMTHandle = osThreadNew(ecat_SM, NULL, &ecatSMT_attributes);
-	eventHTHandle = osThreadNew(eventH_SM, NULL, &eventHT_attributes);
-
-	//	Auxiliar tasks
-
-	ecatSOESTHandler = osThreadNew(soes, NULL, &ecatSOEST_Attrbuttes);
-	ecatStatus = osThreadSuspend(ecatSOESTHandler);
-
-
-	taskManagerTHandler = osThreadNew(taskManger, NULL, &taskManagerT_Attributes);
-
-	sysState = STATUS_INIT;
-	//Debug tasks
-	//eventTesterTHandler = osThreadNew(eventTesterTask,NULL,&eventTesterT_Attributes);	//Pending This task could start before the system is ready
-}
 
 
 

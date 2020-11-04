@@ -2,7 +2,7 @@
  * smLed.c
  *
  *  Created on: Jun 25, 2020
- *      Author: CarlosReyes
+ *      Author: Carlos Reyes
  */
 
 #include "SMs.h"
@@ -13,7 +13,6 @@ osTimerId_t refreshLed,timeoutLed;	//Pending: this could be local or static
 static volatile uint8_t boolTimeoutLed,boolRefreshTimeoutLed;	//PEnding is this necessary?
 //	Debug variables
 volatile uint32_t currentFlags1,currentFlags2;
-
 
 //External variables
 extern TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Declared in WS2812 Libraries
@@ -26,17 +25,17 @@ extern TIM_HandleTypeDef *ledCH1,*ledCH2,*ledCH3,*ledCH4;	//	Declared in WS2812 
 void ledRings_SM (void * argument) {
 	uint8_t chsetupOK[NUM_OF_LEDRINGS];
 	uint8_t error = 0;
-	uint32_t temp32;
+	uint32_t temp32,eventStatus;
 	osStatus_t timerStatus;
+
 
 	timeoutLed = osTimerNew(timeoutCallback_led, osTimerOnce, NULL, NULL);
 	refreshLed = osTimerNew(refreshCallback_led, osTimerOnce, NULL, NULL);
 	if (timeoutLed == NULL) {
-		__NOP();	//TODO Handle the error. To Debug
+		__NOP();	//Debug the error.
 	}
 
-
-	while(1) {		//Infinite loop enforced by task execution
+	while(1) {
 
 		switch (led_step) {
 		/*--------------------------------------------------------------------------------*/
@@ -70,11 +69,9 @@ void ledRings_SM (void * argument) {
 				else {
 					error = 0;
 					//Set the Effects
-					//TODO is there any error?
 					setColorState(color_preop);
 					temp32 = SYS_EVENT|(EV_LED_DSM_INIT<<SHIFT_OFFSET);
-					osEventFlagsSet(evt_sysSignals, temp32);
-					//notifyEvent(LED_INIT);
+					osEventFlagsSet(evt_sysSignals, temp32);	//	System notification
 					led_step = L_send;
 				}
 
@@ -89,7 +86,7 @@ void ledRings_SM (void * argument) {
 				}
 				timerStatus = osTimerStart(timeoutLed, (uint32_t) 1000U);	//Timeout for DMA
 				if (timerStatus != osOK) {
-					notifyError(ERR_LED_OSTIM); // CHCKME This is a internal OS error.
+					notifyError(ERR_LED_OSTIM); //	This is a internal OS error.
 				}
 
 				//exit
@@ -124,7 +121,7 @@ void ledRings_SM (void * argument) {
 					}
 
 					dmaLed1_rcvd = 0;
-					dmaLed2_rcvd = 0;	//Will this be a race condition with the DMA?
+					dmaLed2_rcvd = 0;
 
 					led_step = L_updateColorState;
 					break;
@@ -158,8 +155,8 @@ void ledRings_SM (void * argument) {
 		/*--------------------------------------------------------------------------------*/
 			case	L_updateEffect:
 				//	action
-//				if (led_effectRateUpdt()) {	//PENDING This function checks whether the current effect needs to be updated
-//					__NOP();	//PENDING Modify whenever the effects are needed
+//				if (led_effectRateUpdt()) {	This function checks whether the current effect needs to be updated
+//					__NOP();	//PENDING Effects are a future future
 //				}
 
 				//	exit
@@ -175,7 +172,7 @@ void ledRings_SM (void * argument) {
 					break;
 				}
 				//
-				uint32_t eventStatus = osEventFlagsGet(evt_sysSignals);
+				eventStatus = osEventFlagsGet(evt_sysSignals);
 				osEventFlagsWait(evt_sysSignals, LED_EVENT, osFlagsWaitAny, osWaitForever);
 
 				//exit
@@ -237,7 +234,7 @@ void setColorState(enum enum_colorStates colorState) {
 
 	switch (colorState) {
 	case color_preop:
-		tempRGB = (WS2812_RGB_t){255,255,0};	//Yellow
+		tempRGB = (WS2812_RGB_t){0,0,0};	//Yellow
 		break;
 	case color_error:
 		tempRGB = (WS2812_RGB_t){255,0,0};		//Red

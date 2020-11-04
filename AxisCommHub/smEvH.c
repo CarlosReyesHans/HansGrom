@@ -20,9 +20,8 @@
 
 void eventH_SM (void * argument) {
 
-	uint32_t status,flags;	//CHCKME whether this is needed
+	uint32_t status,flags;
 	uint16_t event_data;
-	//enum enum_events eventType;
 
 	while(1) {		//Infinite loop enforced by task execution
 
@@ -62,7 +61,8 @@ void eventH_SM (void * argument) {
 				//	entry:
 				if (event_data == ERR_ECAT_DSM_FAULT ||
 						ERR_ECAT_CMD_FAULT || ERR_LED_DSM_FAULT ||
-						ERR_TEMP_DSM_FAULT || ERR_TEMP_SENS_OVERHEAT
+						ERR_TEMP_DSM_FAULT || ERR_TEMP_SENS_OVERHEAT ||
+						ERR_ECAT_COMM_LOST
 						) {
 					//	PENDING Add an specific action depending on the error
 					errorFlag = TRUE;
@@ -94,25 +94,25 @@ void eventH_SM (void * argument) {
 			case evH_notifHandling:
 				//	entry:
 				if (event_data == EV_TEMP_DSM_INIT) {
-					//	PENDING Add an specific action depending on the error
+					//	If needed add an specific action depending on the notification
 					temp_initFlag = TRUE;
 				}	//
 				else if (event_data == EV_LED_DSM_INIT) {
-					//	PENDING Add an specific action depending on the warning
+					//	If needed add an specific action depending on the notification
 					led_initFlag = TRUE;
 				}
 				else if (event_data == EV_ECAT_DSM_INIT) {
-					//	PENDING Add an specific action depending on the warning
+					//	If needed add an specific action depending on the notification
 					ecat_initFlag = TRUE;
 				}
 				else if (event_data == EV_ECAT_CMD_ACK) {
-					//	PENDING Add an specific action depending on the warning
+					//	Add an specific action depending on the ECAT cmd
 					sysState = 0xFF;
 					//evH_step = evH_ecatCMD;
 					//break;
 				}
 				else if (event_data == EV_ECAT_APP_OP) {
-					//	PENDING Add an specific action depending on the warning
+					//	Add an specific action depending on the warning
 					if ((sysState&STATUS_SHORT_MASK) == STATUS_STARTED ) { //&& ((sysState>>STATUS_OFFSET_FOR_ERR)&STATUS_DATA_MASK)==ERR_SYS_NONE)
 						warningFlag = FALSE;
 						normalFlag = TRUE;
@@ -123,12 +123,12 @@ void eventH_SM (void * argument) {
 
 				}
 				else if (event_data == EV_ECAT_APP_INIT) {
-					//	PENDING Add an specific action depending on the warning
+					//	If needed add an specific action depending on the notification
 					warningFlag = TRUE;
 					normalFlag = FALSE;
 				}
 				else if (event_data > EV_ECAT_CMD_ACK) {
-					//	PENDING Complete the ECAT CMD handler
+					//	PENDING This could be either an error or a warning or a shortcut to CMD step
 					//evH_step = evH_ecatCMD;
 					__NOP();
 				}
@@ -140,7 +140,7 @@ void eventH_SM (void * argument) {
 					break;
 				}
 				if ((sysState&STATUS_SHORT_MASK) == STATUS_INIT && temp_initFlag && led_initFlag && ecat_initFlag ) {
-					status = (sysState>>STATUS_OFFSET_FOR_ERR);	//	used as temp
+					status = (sysState>>STATUS_OFFSET_FOR_ERR);	//	status used temporary
 					sysState = STATUS_STARTED|(status<<STATUS_OFFSET_FOR_ERR);
 				}
 
@@ -156,8 +156,8 @@ void eventH_SM (void * argument) {
 		/*-------------------------------------------------------------------*/
 			case	evH_ecatCMD:
 				//	entry:
-				//	PENDING create a ecat command handler
-				//eventHandled = TRUE; //TODO this flag should be adequate for usage of other SMs
+				//	PENDING An specific ecat command handler need to be defined
+				//eventHandled = TRUE; //Not needed so far since Flag is being cleared
 				__NOP();
 
 				//exit
@@ -168,7 +168,7 @@ void eventH_SM (void * argument) {
 		/*-------------------------------------------------------------------*/
 			case	evH_error:
 				//	entry:
-				// This DSM has end since an error in the event handler is critical and should be debugged by programmer.
+				// This DSM terminates since an error in the event handler is critical and should be debugged by programmer.
 				errorFlag = TRUE;
 				sysState = ERR_SYS_UNKNOWN;
 

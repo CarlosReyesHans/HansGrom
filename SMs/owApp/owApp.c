@@ -2,11 +2,13 @@
  * owApp.c
  *
  *  Created on: Aug 19, 2020
- *      Author: CarlosReyes
+ *      Author: Carlos Reyes
+ *      Based on owApp.c from
+ * 			Author:          Tilen MAJERLE <tilen@majerle.eu>
+ * 			Version:         v3.0.0
  */
 
 #include "AxisCommHub_definitions.h"
-//#include "main.h"
 #include "cmsis_os.h"
 #include "lwow.h"
 #include "devices/lwow_device_ds18x20.h"
@@ -17,18 +19,16 @@
 
 extern const lwow_ll_drv_t lwow_ll_drv_stm32_hal;
 lwow_t ow_inst;
-lwow_rom_t rom_ids[20];		//TODO What is this for?
+lwow_rom_t rom_ids[20];		//ROM IDs are stored here
 size_t rom_found;
-
 
 //Definition from MAIN
 extern UART_HandleTypeDef huart3;
 
-
 //Definition from SM
 extern int16_t	gv_temperatureData[NUM_OF_SENSORS];
 
-//Functiona definition
+//Functions definition
 static void owApp(void* arg);
 
 const osThreadAttr_t oneWireTask_attr = {
@@ -36,17 +36,18 @@ const osThreadAttr_t oneWireTask_attr = {
 		.stack_size = 512
 };
 
+/*
+ * 	@brief Simple function to spawn the application thread
+ *
+ */
 void initOwApp(void) {
 	ow_inst.arg = &huart3;
-
-osThreadNew(owApp, NULL, &oneWireTask_attr);
-
-
+	osThreadNew(owApp, NULL, &oneWireTask_attr);
 }
 
 /**
- * \brief           Application thread
- * \param[in]       arg: Thread argument
+ * @brief           Application thread
+ * @param[in]       arg: Thread argument
  */
 static void owApp(void* arg) {
     float avg_temp;
